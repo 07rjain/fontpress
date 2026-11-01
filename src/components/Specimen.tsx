@@ -142,12 +142,12 @@ export function Specimen({
               <span>Designer</span>
               <input value={author} onChange={(event) => onAuthor(event.target.value)} placeholder="Your name" maxLength={60} />
             </label>
-            <button type="button" className="primary wide" disabled={!complete || busy !== null} onClick={onDownload}>
-              {busy === 'download' ? progress || 'Making the font…' : `Download ${title}.ttf`}
+            <button type="button" className="primary wide" disabled={filled === 0 || busy !== null} onClick={onDownload}>
+              {busy === 'download' ? progress || 'Making the font…' : `Download ${title}.otf`}
             </button>
             {!complete && (
               <p className="install">
-                Draw the remaining {remaining} character{remaining === 1 ? '' : 's'} before you can download or save.
+                {filled === 0 ? 'Draw a character to download or save your font.' : `You can test this partial font now. ${remaining} characters remain before publishing.`}
               </p>
             )}
             <p className="install">
@@ -187,7 +187,7 @@ export function Specimen({
             <button
               type="button"
               className="ghost wide"
-              disabled={!complete || busy !== null}
+              disabled={filled === 0 || (visibility === 'public' && !complete) || busy !== null}
               onClick={() => onSave(visibility)}
             >
               {busy === 'save'
@@ -200,6 +200,7 @@ export function Specimen({
                     ? 'Publish to the gallery'
                     : 'Save privately'}
             </button>
+            {visibility === 'public' && !complete && <p className="install">Finish all {CHARSET.length} characters to publish, or choose Private to save your progress.</p>}
             {savedFont && (
               <p className="install">
                 Saved {relativeTime(savedFont.updatedAt)} as {savedFont.visibility}.{' '}
@@ -213,7 +214,7 @@ export function Specimen({
           <div className="panel quiet">
             {confirm ? (
               <div className="reset-bar">
-                <span>Erase every letter and start a new font?</span>
+                <span>Start a new font? Your current drawings will stay in My fonts under drafts on this browser.</span>
                 <div className="row">
                   <button
                     type="button"
@@ -223,10 +224,10 @@ export function Specimen({
                       onReset();
                     }}
                   >
-                    Erase everything
+                    Start new font
                   </button>
                   <button type="button" className="ghost" onClick={() => setConfirm(false)}>
-                    Keep
+                    Keep drawing
                   </button>
                 </div>
               </div>

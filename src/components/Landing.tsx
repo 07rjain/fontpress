@@ -46,7 +46,7 @@ const STAGES = [
     stage: 'Stage three',
     venue: 'The print shop',
     title: 'Download, keep, or share',
-    copy: 'Download a .ttf to install on your computer. Save it to your account privately, or publish it to the gallery so anyone can use it.',
+    copy: 'Download a .otf to install on your computer. Save it to your account privately, or publish it to the gallery so anyone can use it.',
   },
 ];
 
@@ -120,7 +120,7 @@ export function Landing({
         </div>
         <ul className="wristbands" aria-label="What you get">
           <li>{CHARSET.length} characters</li>
-          <li>.ttf you can install</li>
+          <li>.otf you can install</li>
           <li>Traced in your browser</li>
           <li>Private until you publish</li>
         </ul>

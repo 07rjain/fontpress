@@ -1,13 +1,16 @@
-import opentype from 'opentype.js';
+import type opentype from 'opentype.js';
 import type { Cmd } from './paths';
-import { FONT, glyphName, postScriptName, safeFamily } from './spec';
-import { traceImage } from './trace';
+import { shiftX } from './paths';
+import { FONT, GUIDES, glyphPixelSize, glyphName, postScriptName, safeFamily, CHARSET } from './spec';
+import { fontFormat } from './fontFormat';
+import { emptyProject } from './project';
+import { createMask, maskToUrl } from './draw';
 
-export type GlyphInput = { char: string; image: string | null; rev: number };
+export type GlyphInput = { char: string; image: string | null; rev: number; offsetX?: number };
 
 type CacheEntry = {
   rev: number;
-  sig: number;
+  image: string | null;
   advance: number;
   commands: Cmd[];
   empty: boolean;
@@ -31,14 +34,6 @@ export function clearFontCache() {
   cache.clear();
 }
 
-export function glyphSignature(image: string | null): number {
-  if (!image) return 0;
-  let hash = image.length >>> 0;
-  hash = Math.imul(hash ^ image.charCodeAt(image.length >> 1), 16777619);
-  hash ^= image.charCodeAt(image.length - 1);
-  return hash >>> 0;
-}
-
 export async function assembleFont(
   glyphs: GlyphInput[],
   familyName: string,
@@ -46,15 +41,16 @@ export async function assembleFont(
   isCurrent: () => boolean,
   onProgress?: (done: number, total: number) => void,
 ): Promise<{ buffer: ArrayBuffer; covered: string[] } | null> {
+  const [{ default: ot }, { traceImage }] = await Promise.all([import('opentype.js'), import('./trace')]);
+  if (!isCurrent()) return null;
   const pending = glyphs.filter((glyph) => glyph.image);
   let done = 0;
   onProgress?.(0, pending.length);
 
   for (const glyph of glyphs) {
     if (!isCurrent()) return null;
-    const sig = glyphSignature(glyph.image);
     const cached = cache.get(glyph.char);
-    if (cached && cached.rev === glyph.rev && cached.sig === sig) {
+    if (cached && cached.rev === glyph.rev && cached.image === glyph.image) {
       if (glyph.image) {
         done++;
         onProgress?.(done, pending.length);
@@ -62,7 +58,7 @@ export async function assembleFont(
       continue;
     }
     if (!glyph.image) {
-      cache.set(glyph.char, { rev: glyph.rev, sig, advance: 0, commands: [], empty: true });
+      cache.set(glyph.char, { rev: glyph.rev, image: null, advance: 0, commands: [], empty: true });
       continue;
     }
     try {
@@ -70,13 +66,14 @@ export async function assembleFont(
       if (!isCurrent()) return null;
       cache.set(glyph.char, {
         rev: glyph.rev,
-        sig,
+        image: glyph.image,
         advance: traced?.advance ?? 0,
         commands: traced?.commands ?? [],
         empty: !traced,
       });
     } catch {
-      cache.set(glyph.char, { rev: glyph.rev, sig, advance: 0, commands: [], empty: true });
+      if (!isCurrent()) return null;
+      cache.set(glyph.char, { rev: glyph.rev, image: glyph.image, advance: 0, commands: [], empty: true });
     }
     done++;
     onProgress?.(done, pending.length);
@@ -88,17 +85,18 @@ export async function assembleFont(
   const family = safeFamily(familyName);
   const advances: number[] = [];
   const covered: string[] = [];
-  const built: opentype.Glyph[] = [notdefGlyph(), spacePlaceholder()];
+  const built: opentype.Glyph[] = [notdefGlyph(ot), spacePlaceholder(ot)];
+  const unitsPerPixel = FONT.capHeight / ((GUIDES.baseline - GUIDES.cap) * glyphPixelSize().h);
 
   for (const glyph of glyphs) {
     const entry = cache.get(glyph.char);
     if (!entry || entry.empty || entry.commands.length === 0) continue;
     built.push(
-      new opentype.Glyph({
+      new ot.Glyph({
         name: glyphName(glyph.char),
         unicode: glyph.char.codePointAt(0),
         advanceWidth: entry.advance,
-        path: commandsToPath(entry.commands),
+        path: commandsToPath(ot, shiftX(entry.commands, (glyph.offsetX ?? 0) * unitsPerPixel)),
       }),
     );
     advances.push(entry.advance);
@@ -106,14 +104,14 @@ export async function assembleFont(
   }
 
   const median = medianOf(advances) || 320;
-  built[1] = new opentype.Glyph({
+  built[1] = new ot.Glyph({
     name: 'space',
     unicode: 32,
     advanceWidth: Math.round(Math.min(480, Math.max(180, median * 0.42))),
-    path: new opentype.Path(),
+    path: new ot.Path(),
   });
 
-  const font = new opentype.Font({
+  const font = new ot.Font({
     familyName: family,
     styleName: 'Regular',
     fullName: `${family} Regular`,
@@ -146,17 +144,18 @@ export function clearPreview() {
 }
 
 export function saveFontFile(buffer: ArrayBuffer, filename: string) {
-  const blob = new Blob([buffer], { type: 'font/ttf' });
+  const format = fontFormat(buffer);
+  const blob = new Blob([buffer], { type: format.mime });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename;
+  link.download = filename.replace(/\.(?:ttf|otf)$/i, `.${format.extension}`);
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
-function commandsToPath(commands: Cmd[]): opentype.Path {
-  const path = new opentype.Path();
+function commandsToPath(ot: typeof opentype, commands: Cmd[]): opentype.Path {
+  const path = new ot.Path();
   for (const command of commands) {
     if (command.t === 'M') path.moveTo(command.x, command.y);
     else if (command.t === 'L') path.lineTo(command.x, command.y);
@@ -166,8 +165,8 @@ function commandsToPath(commands: Cmd[]): opentype.Path {
   return path;
 }
 
-function notdefGlyph(): opentype.Glyph {
-  const path = new opentype.Path();
+function notdefGlyph(ot: typeof opentype): opentype.Glyph {
+  const path = new ot.Path();
   path.moveTo(80, -240);
   path.lineTo(520, -240);
   path.lineTo(520, 720);
@@ -178,7 +177,7 @@ function notdefGlyph(): opentype.Glyph {
   path.lineTo(450, 650);
   path.lineTo(450, -170);
   path.close();
-  return new opentype.Glyph({
+  return new ot.Glyph({
     name: '.notdef',
     unicode: 0,
     advanceWidth: 600,
@@ -186,13 +185,34 @@ function notdefGlyph(): opentype.Glyph {
   });
 }
 
-function spacePlaceholder(): opentype.Glyph {
-  return new opentype.Glyph({
+function spacePlaceholder(ot: typeof opentype): opentype.Glyph {
+  return new ot.Glyph({
     name: 'space',
     unicode: 32,
     advanceWidth: 280,
-    path: new opentype.Path(),
+    path: new ot.Path(),
   });
+}
+
+/** Recovers editable drawings for older library entries that only stored a font. */
+export async function projectFromFont(buffer: ArrayBuffer, name: string, designer: string) {
+  const { default: ot } = await import('opentype.js');
+  const font = ot.parse(buffer);
+  const project = emptyProject();
+  project.familyName = name;
+  project.author = designer;
+  const { h } = glyphPixelSize();
+  const pixelsPerUnit = ((GUIDES.baseline - GUIDES.cap) * h) / FONT.capHeight;
+  for (const char of CHARSET) {
+    if (!font.charToGlyphIndex(char)) continue;
+    const glyph = font.charToGlyph(char);
+    const mask = createMask();
+    const ctx = mask.getContext('2d');
+    if (!ctx) throw new Error('Could not restore the saved font.');
+    glyph.getPath(0, GUIDES.baseline * h, font.unitsPerEm * pixelsPerUnit).draw(ctx);
+    project.glyphs[char] = { image: maskToUrl(mask), rev: 1, offsetX: 0 };
+  }
+  return project;
 }
 
 function medianOf(values: number[]): number {

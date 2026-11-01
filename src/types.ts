@@ -5,9 +5,11 @@ export type Tool = 'pen' | 'eraser';
 export type Glyph = {
   image: string | null;
   rev: number;
+  offsetX: number;
 };
 
 export type Project = {
+  draftId: string;
   familyName: string;
   author: string;
   sampleText: string;

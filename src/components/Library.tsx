@@ -2,11 +2,16 @@ import { useState } from 'react';
 import type { SavedFont, Visibility } from '../api';
 import { CHARSET } from '../spec';
 import { FontCard, relativeTime } from './FontCard';
+import type { LocalDraft } from '../storage';
 
 type Props = {
   fonts: SavedFont[] | null;
   error: string;
   currentId: string | null;
+  currentDraftId: string;
+  drafts: LocalDraft[];
+  onResume: (id: string) => void;
+  onEdit: (font: SavedFont) => void;
   busyId: string | null;
   load: (font: SavedFont) => Promise<ArrayBuffer>;
   onVisibility: (font: SavedFont, visibility: Visibility) => void;
@@ -16,7 +21,7 @@ type Props = {
   onOpenSpecimen: () => void;
 };
 
-export function Library({ fonts, error, currentId, busyId, load, onVisibility, onDownload, onDelete, onRetry, onOpenSpecimen }: Props) {
+export function Library({ fonts, error, currentId, currentDraftId, drafts, onResume, onEdit, busyId, load, onVisibility, onDownload, onDelete, onRetry, onOpenSpecimen }: Props) {
   const [confirming, setConfirming] = useState<string | null>(null);
 
   return (
@@ -27,13 +32,23 @@ export function Library({ fonts, error, currentId, busyId, load, onVisibility, o
           <h1>Your saved fonts</h1>
           <p className="lede">
             Private fonts are only visible to you. Public fonts appear in the gallery, where anyone can preview and
-            download them.
+            download them. Choose Edit to continue drawing a saved font on any device.
           </p>
         </div>
         <button type="button" className="ghost" onClick={onOpenSpecimen}>
           Save the font you're drawing
         </button>
       </header>
+
+      {drafts.length > 0 && <section className="local-drafts" aria-label="Drafts on this browser">
+        <h2>Drafts on this browser</h2>
+        <p className="meta">These drafts stay on this device. Save privately to keep an editable copy in your account.</p>
+        <ul>{drafts.map((draft) => <li key={draft.id}>
+          <div><strong>{draft.name}</strong><p className="meta">{draft.filled} characters · {relativeTime(draft.updatedAt)}</p></div>
+          <button type="button" className="ghost" disabled={busyId !== null || draft.id === currentDraftId}
+            onClick={() => onResume(draft.id)}>{draft.id === currentDraftId ? 'Drawing now' : 'Resume draft'}</button>
+        </li>)}</ul>
+      </section>}
 
       {error && (
         <div className="empty">
@@ -57,7 +72,7 @@ export function Library({ fonts, error, currentId, busyId, load, onVisibility, o
       {fonts && fonts.length > 0 && (
         <div className="card-grid">
           {fonts.map((font) => {
-            const busy = busyId === font.id;
+            const busy = busyId !== null;
             const isPublic = font.visibility === 'public';
             return (
               <FontCard
@@ -93,13 +108,17 @@ export function Library({ fonts, error, currentId, busyId, load, onVisibility, o
                   </>
                 ) : (
                   <>
+                    <button type="button" className="primary" disabled={busy} onClick={() => onEdit(font)}>
+                      {busyId === font.id ? 'Working…' : 'Edit'}
+                    </button>
                     <button type="button" className="ghost" onClick={() => onDownload(font)}>
                       Download
                     </button>
                     <button
                       type="button"
                       className="ghost"
-                      disabled={busy}
+                      disabled={busy || (!isPublic && font.glyphCount < CHARSET.length)}
+                      title={!isPublic && font.glyphCount < CHARSET.length ? 'Finish all characters before publishing' : undefined}
                       onClick={() => onVisibility(font, isPublic ? 'private' : 'public')}
                     >
                       {busy ? 'Saving…' : isPublic ? 'Make private' : 'Make public'}

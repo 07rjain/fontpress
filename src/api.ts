@@ -10,6 +10,7 @@ export type SavedFont = {
   size: number;
   createdAt: number;
   updatedAt: number;
+  editable: boolean;
 };
 
 export type TokenSource = () => Promise<string | null>;
@@ -48,6 +49,18 @@ export async function listPublicFonts(): Promise<SavedFont[]> {
   return (await response.json()).fonts;
 }
 
+export type FontPage = { fonts: SavedFont[]; total: number; page: number; pageSize: number };
+export async function searchPublicFonts(query: string, page: number): Promise<FontPage> {
+  const params = new URLSearchParams({ q: query, page: String(page) });
+  const response = await call(`/api/fonts/public?${params}`, {});
+  return response.json();
+}
+
+export async function fetchFontProject(getToken: TokenSource, id: string): Promise<Project> {
+  const response = await call(`/api/fonts/${id}/project`, {}, getToken);
+  return (await response.json()).project;
+}
+
 export async function listMyFonts(getToken: TokenSource): Promise<SavedFont[]> {
   const response = await call('/api/fonts/mine', {}, getToken);
   return (await response.json()).fonts;
@@ -55,10 +68,12 @@ export async function listMyFonts(getToken: TokenSource): Promise<SavedFont[]> {
 
 export async function saveFont(
   getToken: TokenSource,
-  input: { id: string | null; buffer: ArrayBuffer; name: string; designer: string; visibility: Visibility },
+  input: { id: string | null; buffer: ArrayBuffer; name: string; designer: string; visibility: Visibility; project: Project },
 ): Promise<SavedFont> {
   const form = new FormData();
-  form.set('file', new Blob([input.buffer], { type: 'font/ttf' }), 'font.ttf');
+  const format = fontFormat(input.buffer);
+  form.set('file', new Blob([input.buffer], { type: format.mime }), `font.${format.extension}`);
+  form.set('project', JSON.stringify(input.project));
   form.set('name', input.name);
   form.set('designer', input.designer);
   form.set('visibility', input.visibility);
@@ -84,3 +99,5 @@ export async function fetchFontFile(font: SavedFont, getToken?: TokenSource): Pr
   const response = await call(`/api/fonts/${font.id}/file?v=${font.updatedAt}`, {}, getToken);
   return response.arrayBuffer();
 }
+import { fontFormat } from './fontFormat';
+import type { Project } from './types';

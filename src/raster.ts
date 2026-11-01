@@ -340,6 +340,14 @@ function removeSpecks(raster: Raster, minArea: number) {
 /** Turns a photographed cell into black ink on transparency, or null when the cell is empty. */
 export function prepareCell(src: Raster, delta: number): Raster | null {
   const { w, h } = src;
+  // Treat transparency as white paper, including partially transparent edge pixels.
+  const opaque = new Uint8ClampedArray(src.data.length);
+  for (let i = 0; i < opaque.length; i += 4) {
+    const alpha = src.data[i + 3] / 255;
+    for (let c = 0; c < 3; c++) opaque[i + c] = src.data[i + c] * alpha + 255 * (1 - alpha);
+    opaque[i + 3] = 255;
+  }
+  src = { w, h, data: opaque };
   const samples: number[] = [];
   for (let i = 0; i < src.data.length; i += 4) {
     const r = src.data[i];

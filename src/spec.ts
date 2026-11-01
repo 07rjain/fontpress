@@ -255,7 +255,7 @@ export function fontFileName(name: string): string {
   const clean = safeFamily(name)
     .replace(/\s+/g, '-')
     .replace(/[^A-Za-z0-9-]/g, '');
-  return `${clean || 'My-Hand'}.ttf`;
+  return `${clean || 'My-Hand'}.otf`;
 }
 
 function assertSpec() {

@@ -16,18 +16,22 @@ type Props = {
   image: string | null;
   tool: Tool;
   width: number;
+  offsetX?: number;
   onCommit: (image: string | null) => void;
   onFile: (file: File) => void;
   aside?: ReactNode;
 };
 
-export function Board({ char, label, image, tool, width, onCommit, onFile, aside }: Props) {
+export function Board({ char, label, image, tool, width, offsetX = 0, onCommit, onFile, aside }: Props) {
   const viewRef = useRef<HTMLCanvasElement>(null);
   const maskRef = useRef<HTMLCanvasElement | null>(null);
   const loadedKey = useRef('');
-  const propsRef = useRef({ char, tool, width, onCommit });
-  propsRef.current = { char, tool, width, onCommit };
-  const live = useRef<{ pointerId: number; points: Point[]; erase: boolean } | null>(null);
+  const propsRef = useRef({ char, tool, width, offsetX, onCommit });
+  propsRef.current = { char, tool, width, offsetX, onCommit };
+  const live = useRef<{
+    pointerId: number; points: Point[]; erase: boolean; char: string; width: number;
+    mask: HTMLCanvasElement; before: HTMLCanvasElement; onCommit: Props['onCommit'];
+  } | null>(null);
   const cursor = useRef<Point | null>(null);
   const [ready, setReady] = useState(false);
   const { w: maskW, h: maskH, aspect } = glyphPixelSize();
@@ -53,12 +57,13 @@ export function Board({ char, label, image, tool, width, onCommit, onFile, aside
     ctx.fillRect(0, 0, rect.width, rect.height);
     ctx.save();
     ctx.globalAlpha = 1;
-    ctx.drawImage(mask, 0, 0, rect.width, rect.height);
+    ctx.drawImage(mask, (propsRef.current.offsetX / maskW) * rect.width, 0, rect.width, rect.height);
     const gesture = live.current;
     if (gesture && !gesture.erase && gesture.points.length > 0) {
       ctx.save();
       ctx.scale(rect.width / maskW, rect.height / maskH);
-      strokeOn(ctx, gesture.points, propsRef.current.width, false);
+      ctx.translate(propsRef.current.offsetX, 0);
+      strokeOn(ctx, gesture.points, gesture.width, false);
       ctx.restore();
     }
     ctx.restore();
@@ -69,7 +74,7 @@ export function Board({ char, label, image, tool, width, onCommit, onFile, aside
       ctx.strokeStyle = 'rgba(28, 25, 22, 0.7)';
       ctx.lineWidth = 1.5;
       const radius = ((propsRef.current.width * 2.7) / 2) * (rect.width / maskW);
-      ctx.arc((ring.x / maskW) * rect.width, (ring.y / maskH) * rect.height, radius, 0, Math.PI * 2);
+      ctx.arc(((ring.x + propsRef.current.offsetX) / maskW) * rect.width, (ring.y / maskH) * rect.height, radius, 0, Math.PI * 2);
       ctx.stroke();
     }
   }
@@ -81,6 +86,8 @@ export function Board({ char, label, image, tool, width, onCommit, onFile, aside
       paint();
       return;
     }
+    live.current = null;
+    cursor.current = null;
     setReady(false);
     const mask = createMask();
     maskRef.current = mask;
@@ -106,6 +113,8 @@ export function Board({ char, label, image, tool, width, onCommit, onFile, aside
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [char, image]);
 
+  useEffect(() => { paint(); }, [offsetX, tool, width]);
+
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
@@ -117,7 +126,7 @@ export function Board({ char, label, image, tool, width, onCommit, onFile, aside
   function toMask(event: { clientX: number; clientY: number }): Point {
     const rect = viewRef.current!.getBoundingClientRect();
     return {
-      x: ((event.clientX - rect.left) / rect.width) * maskW,
+      x: ((event.clientX - rect.left) / rect.width) * maskW - propsRef.current.offsetX,
       y: ((event.clientY - rect.top) / rect.height) * maskH,
     };
   }
@@ -128,7 +137,7 @@ export function Board({ char, label, image, tool, width, onCommit, onFile, aside
   }
 
   function onPointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
-    if (!ready || !maskRef.current) return;
+    if (!ready || !maskRef.current || live.current) return;
     if (event.button !== 0) return;
     event.preventDefault();
     try {
@@ -137,10 +146,17 @@ export function Board({ char, label, image, tool, width, onCommit, onFile, aside
       // Some browsers reject capture for a pointer that is already released.
     }
     const point = toMask(event);
+    const before = createMask();
+    maskContext(before).drawImage(maskRef.current, 0, 0);
     live.current = {
       pointerId: event.pointerId,
       points: [point],
       erase: propsRef.current.tool === 'eraser',
+      char,
+      width,
+      mask: maskRef.current,
+      before,
+      onCommit,
     };
     cursor.current = point;
     if (live.current.erase) {
@@ -158,7 +174,7 @@ export function Board({ char, label, image, tool, width, onCommit, onFile, aside
       return;
     }
     const before = gesture.points.length;
-    const samples: PointerEvent[] = [event.nativeEvent];
+    const samples: PointerEvent[] = [];
     try {
       const coalesced = event.nativeEvent.getCoalescedEvents?.();
       if (coalesced) {
@@ -167,25 +183,41 @@ export function Board({ char, label, image, tool, width, onCommit, onFile, aside
     } catch {
       // Some browsers throw for a pointer that is no longer active.
     }
+    samples.push(event.nativeEvent);
     for (const sample of samples) addPoint(gesture.points, toMask(sample));
     cursor.current = gesture.points[gesture.points.length - 1] ?? null;
     if (gesture.erase) {
       const from = Math.max(0, before - 1);
-      strokeOn(maskContext(maskRef.current), gesture.points.slice(from), propsRef.current.width, true);
+      strokeOn(maskContext(gesture.mask), gesture.points.slice(from), gesture.width, true);
     }
     paint();
   }
 
   function onPointerUp(event: React.PointerEvent<HTMLCanvasElement>) {
     const gesture = live.current;
-    if (!gesture || gesture.pointerId !== event.pointerId || !maskRef.current) return;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    if (gesture.char !== propsRef.current.char || gesture.mask !== maskRef.current) {
+      cancelGesture();
+      return;
+    }
+    addPoint(gesture.points, toMask(event));
     if (!gesture.erase && gesture.points.length > 0) {
-      strokeOn(maskContext(maskRef.current), gesture.points, propsRef.current.width, false);
+      strokeOn(maskContext(gesture.mask), gesture.points, gesture.width, false);
     }
     live.current = null;
-    const key = `${propsRef.current.char}::${maskToUrl(maskRef.current) ?? ''}`;
+    const result = maskToUrl(gesture.mask);
+    const key = `${gesture.char}::${result ?? ''}`;
     loadedKey.current = key;
-    propsRef.current.onCommit(maskToUrl(maskRef.current));
+    gesture.onCommit(result);
+    paint();
+  }
+
+  function cancelGesture(event?: React.PointerEvent<HTMLCanvasElement>) {
+    const gesture = live.current;
+    if (!gesture || (event && gesture.pointerId !== event.pointerId)) return;
+    if (gesture.mask === maskRef.current) maskRef.current = gesture.before;
+    live.current = null;
+    cursor.current = null;
     paint();
   }
 
@@ -205,9 +237,12 @@ export function Board({ char, label, image, tool, width, onCommit, onFile, aside
         tabIndex={0}
         role="application"
         aria-label={`Drawing surface for ${label}`}
+        aria-busy={!ready}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerCancel={cancelGesture}
+        onLostPointerCapture={cancelGesture}
         onPointerLeave={() => {
           cursor.current = null;
           paint();

@@ -1,23 +1,21 @@
 import { UserButton, useAuth, useClerk } from '@clerk/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ApiError,
   deleteFont,
   fetchFontFile,
+  fetchFontProject,
   listMyFonts,
   saveFont,
   setFontVisibility,
   type SavedFont,
   type Visibility,
 } from './api';
-import { Aligner } from './components/Aligner';
 import { AuthGate } from './components/AuthGate';
 import { Board } from './components/Board';
-import { Gallery } from './components/Gallery';
 import { Landing } from './components/Landing';
-import { Library } from './components/Library';
 import { Rail } from './components/Rail';
-import { Specimen, type Busy } from './components/Specimen';
+import type { Busy } from './components/Specimen';
 import { Sheets, TemplateScreen } from './components/TemplateScreen';
 import { nudgeImage } from './draw';
 import {
@@ -27,20 +25,27 @@ import {
   enqueue,
   publishPreview,
   saveFontFile,
+  projectFromFont,
 } from './font';
-import { loadPhotoFile, placeLetterPhoto, type LoadedPhoto } from './image';
+import type { LoadedPhoto } from './image';
 import {
   CHARSET,
   charLabel,
   fontFileName as downloadName,
   type SheetId,
 } from './spec';
-import { emptyProject, loadProject, saveProject } from './storage';
-import type { Project, Tool } from './types';
+import { emptyProject, normalizeProject, loadProject, saveProject, listDrafts, loadDraft, type LocalDraft } from './storage';
+import type { Glyph, Project, Tool } from './types';
+import { useTaskScope } from './useTaskScope';
+
+const Aligner = lazy(() => import('./components/Aligner').then((m) => ({ default: m.Aligner })));
+const Gallery = lazy(() => import('./components/Gallery').then((m) => ({ default: m.Gallery })));
+const Library = lazy(() => import('./components/Library').then((m) => ({ default: m.Library })));
+const Specimen = lazy(() => import('./components/Specimen').then((m) => ({ default: m.Specimen })));
 
 type UndoEntry =
-  | { type: 'glyph'; char: string; image: string | null }
-  | { type: 'batch'; images: Record<string, string | null> };
+  | { type: 'glyph'; char: string; glyph: Glyph }
+  | { type: 'batch'; glyphs: Record<string, Glyph> };
 
 type Mode = 'home' | 'draw' | 'specimen' | 'template' | 'align' | 'library' | 'gallery';
 
@@ -67,9 +72,27 @@ function urlFor(mode: Mode): string {
 }
 
 export function App() {
-  const { isLoaded, isSignedIn, userId, getToken } = useAuth();
+  const { isLoaded, userId } = useAuth();
+  if (!isLoaded) return <div className="boot"><p>Handpress</p></div>;
+  return <Suspense fallback={<div className="boot"><p>Loading the studio…</p></div>}>
+    <Studio key={userId ?? 'guest'} />
+  </Suspense>;
+}
+
+function Studio() {
+  const { isLoaded, isSignedIn, userId, getToken: getAuthToken } = useAuth();
+  const { capture: captureAccount } = useTaskScope();
+  const { capture: captureDraft, invalidate: invalidateDraft } = useTaskScope();
+  const getToken = useCallback(async () => {
+    const current = captureAccount();
+    const token = await getAuthToken();
+    if (!current()) throw new Error('The account changed. Try again.');
+    return token;
+  }, [captureAccount, getAuthToken]);
   const clerk = useClerk();
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [project, setProject] = useState<Project>(() => emptyProject());
   const [active, setActive] = useState('A');
   const [tool, setTool] = useState<Tool>('pen');
@@ -84,15 +107,23 @@ export function App() {
   const [canUndo, setCanUndo] = useState(false);
   const [library, setLibrary] = useState<SavedFont[] | null>(null);
   const [libraryError, setLibraryError] = useState('');
+  const [drafts, setDrafts] = useState<LocalDraft[]>([]);
+  const libraryRequest = useRef(0);
+  const busyRef = useRef(false);
+  const busyFontRef = useRef(false);
   const [busyFont, setBusyFont] = useState<string | null>(null);
   const undoRef = useRef<UndoEntry[]>([]);
   const projectRef = useRef(project);
   const readyRef = useRef(false);
   const ownerRef = useRef<string | null>(null);
+  const photoRef = useRef(photo);
+  photoRef.current = photo;
   const fileRef = useRef<HTMLInputElement>(null);
   const letterRef = useRef<HTMLInputElement>(null);
   projectRef.current = project;
   const owner = isLoaded ? (userId ?? null) : undefined;
+
+  useEffect(() => () => { photoRef.current?.bitmap.close(); }, []);
 
   const setMode = useCallback((next: Mode) => {
     setModeState(next);
@@ -120,6 +151,7 @@ export function App() {
     readyRef.current = false;
     ownerRef.current = null;
     setReady(false);
+    setLoadError('');
     undoRef.current = [];
     setCanUndo(false);
     clearFontCache();
@@ -141,22 +173,33 @@ export function App() {
       setProject(stored ?? emptyProject());
       readyRef.current = true;
       setReady(true);
+    }).catch(() => {
+      if (!cancel) setLoadError('Could not read your saved drawings. Retry before starting another draft.');
     });
     return () => {
       cancel = true;
+      if (readyRef.current && ownerRef.current) {
+        void saveProject(projectRef.current, ownerRef.current).catch(() => undefined);
+      }
     };
-  }, [owner]);
+  }, [owner, loadAttempt]);
 
   useEffect(() => {
     const current = ownerRef.current;
     if (!ready || !current) return;
+    const isCurrent = captureDraft();
     const timer = window.setTimeout(() => {
-      void saveProject(project, current).catch(() => {
-        setNote('This browser could not save the drawings. They will last for this visit.');
+      void saveProject(project, current).then(() => {
+        if (!isCurrent()) return;
+        const summary = { id: project.draftId, name: project.familyName,
+          filled: CHARSET.filter((char) => project.glyphs[char].image).length, updatedAt: Date.now() };
+        setDrafts((value) => [summary, ...value.filter((draft) => draft.id !== summary.id)]);
+      }).catch(() => {
+        if (isCurrent()) setNote('This browser could not save the drawings. They will last for this visit.');
       });
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [project, ready]);
+  }, [project, ready, captureDraft]);
 
   useEffect(() => {
     const onHide = () => {
@@ -169,17 +212,31 @@ export function App() {
   }, []);
 
   const refreshLibrary = useCallback(async () => {
+    const current = captureAccount();
+    const request = ++libraryRequest.current;
     setLibraryError('');
     try {
-      setLibrary(await listMyFonts(getToken));
+      const [fonts, local] = await Promise.all([
+        listMyFonts(getToken),
+        owner ? listDrafts(owner).catch(() => []) : Promise.resolve([]),
+      ]);
+      if (!current() || request !== libraryRequest.current) return;
+      setLibrary(fonts);
+      setDrafts(local);
     } catch (err) {
-      setLibraryError(err instanceof Error ? err.message : 'Could not load your fonts.');
+      if (current() && request === libraryRequest.current) setLibraryError(err instanceof Error ? err.message : 'Could not load your fonts.');
     }
-  }, [getToken]);
+  }, [getToken, owner, captureAccount]);
 
   useEffect(() => {
-    if (ready && isSignedIn && library === null && !libraryError) void refreshLibrary();
-  }, [ready, isSignedIn, library, libraryError, refreshLibrary]);
+    if (ready && isSignedIn) void refreshLibrary();
+  }, [ready, isSignedIn, refreshLibrary]);
+
+  useEffect(() => {
+    if (mode !== 'library' || !owner) return;
+    const current = captureAccount();
+    void listDrafts(owner).then((local) => { if (current()) setDrafts(local); }).catch(() => undefined);
+  }, [mode, owner, captureAccount]);
 
   useEffect(() => {
     const family = project.familyName.trim();
@@ -197,7 +254,7 @@ export function App() {
   }, [note]);
 
   const filled = CHARSET.filter((char) => project.glyphs[char]?.image);
-  const signature = filled.map((char) => `${char}:${project.glyphs[char].rev}`).join('|');
+  const signature = filled.map((char) => `${char}:${project.glyphs[char].rev}:${project.glyphs[char].offsetX}`).join('|');
 
   useEffect(() => {
     if (!ready) return;
@@ -208,29 +265,31 @@ export function App() {
       return;
     }
     let cancelled = false;
+    const current = captureDraft();
     const timer = window.setTimeout(() => {
       setUpdating(true);
       void enqueue(async () => {
-        if (cancelled) return;
+        if (cancelled || !current()) return;
         const snapshot = CHARSET.map((char) => ({
           char,
           image: projectRef.current.glyphs[char].image,
           rev: projectRef.current.glyphs[char].rev,
+          offsetX: projectRef.current.glyphs[char].offsetX,
         }));
         const built = await assembleFont(
           snapshot,
           projectRef.current.familyName,
           projectRef.current.author,
-          () => !cancelled,
+          () => !cancelled && current(),
           () => undefined,
         );
-        if (!built || cancelled) return;
-        await publishPreview(built.buffer, () => !cancelled);
-        if (cancelled) return;
+        if (!built || cancelled || !current()) return;
+        await publishPreview(built.buffer, () => !cancelled && current());
+        if (cancelled || !current()) return;
         setCovered(new Set(built.covered));
         setUpdating(false);
       }).catch(() => {
-        if (!cancelled) {
+        if (!cancelled && current()) {
           setUpdating(false);
           setNote('The preview could not be built from these drawings.');
         }
@@ -240,19 +299,19 @@ export function App() {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [signature, ready, filled.length]);
+  }, [signature, ready, filled.length, project.draftId, captureDraft]);
 
   const commit = useCallback((char: string, image: string | null) => {
     const previous = projectRef.current.glyphs[char]?.image ?? null;
     if (previous === image) return;
-    undoRef.current.push({ type: 'glyph', char, image: previous });
+    undoRef.current.push({ type: 'glyph', char, glyph: { ...projectRef.current.glyphs[char] } });
     if (undoRef.current.length > 40) undoRef.current.shift();
     setCanUndo(true);
     setProject((current) => ({
       ...current,
       glyphs: {
         ...current.glyphs,
-        [char]: { image, rev: current.glyphs[char].rev + 1 },
+        [char]: { ...current.glyphs[char], image, rev: current.glyphs[char].rev + 1 },
       },
     }));
   }, []);
@@ -264,12 +323,12 @@ export function App() {
     setProject((current) => {
       const glyphs = { ...current.glyphs };
       if (entry.type === 'glyph') {
-        glyphs[entry.char] = { image: entry.image, rev: glyphs[entry.char].rev + 1 };
+        glyphs[entry.char] = { ...entry.glyph, rev: glyphs[entry.char].rev + 1 };
         setActive(entry.char);
       } else {
-        for (const [char, image] of Object.entries(entry.images)) {
+        for (const [char, glyph] of Object.entries(entry.glyphs)) {
           if (!glyphs[char]) continue;
-          glyphs[char] = { image, rev: glyphs[char].rev + 1 };
+          glyphs[char] = { ...glyph, rev: glyphs[char].rev + 1 };
         }
       }
       return { ...current, glyphs };
@@ -306,9 +365,12 @@ export function App() {
 
   async function onSheetFile(file: File | undefined) {
     if (!file) return;
+    const current = captureDraft();
     setNote('Reading the photo…');
     try {
+      const { loadPhotoFile } = await import('./image');
       const loaded = await loadPhotoFile(file);
+      if (!current()) { loaded.bitmap.close(); return; }
       setPhoto((current) => {
         current?.bitmap.close?.();
         return loaded;
@@ -320,14 +382,17 @@ export function App() {
           : 'Drag the red handles onto the four black squares.',
       );
     } catch (err) {
-      setNote(err instanceof Error ? err.message : 'Could not read that photo.');
+      if (current()) setNote(err instanceof Error ? err.message : 'Could not read that photo.');
     }
   }
 
   async function onLetterFile(file: File | undefined) {
     if (!file) return;
+    const current = captureDraft();
     try {
+      const { placeLetterPhoto } = await import('./image');
       const image = await placeLetterPhoto(file, active);
+      if (!current()) return;
       if (!image) {
         setNote(`No ink found for ${charLabel(active)}. Try a closer photo with a dark pen.`);
         return;
@@ -336,7 +401,7 @@ export function App() {
       setMode('draw');
       setNote(`Placed a photo on ${charLabel(active)}.`);
     } catch (err) {
-      setNote(err instanceof Error ? err.message : 'Could not use that image.');
+      if (current()) setNote(err instanceof Error ? err.message : 'Could not use that image.');
     }
   }
 
@@ -347,15 +412,15 @@ export function App() {
       setNote('No new letters were added.');
       return;
     }
-    const previous: Record<string, string | null> = {};
-    for (const [char] of entries) previous[char] = projectRef.current.glyphs[char]?.image ?? null;
-    undoRef.current.push({ type: 'batch', images: previous });
+    const previous: Record<string, Glyph> = {};
+    for (const [char] of entries) previous[char] = { ...projectRef.current.glyphs[char] };
+    undoRef.current.push({ type: 'batch', glyphs: previous });
     setCanUndo(true);
     setProject((current) => {
       const glyphs = { ...current.glyphs };
       for (const [char, image] of entries) {
         if (!glyphs[char]) continue;
-        glyphs[char] = { image, rev: glyphs[char].rev + 1 };
+        glyphs[char] = { image, rev: glyphs[char].rev + 1, offsetX: 0 };
       }
       return { ...current, glyphs };
     });
@@ -365,119 +430,195 @@ export function App() {
     setNote(`Imported ${entries.length} letters. Undo puts your previous drawings back.`);
   }
 
-  async function buildCurrentFont() {
+  async function buildCurrentFont(snapshot: Project, current: () => boolean, complete: boolean) {
     setProgress('Making the font…');
-    const snapshot = CHARSET.map((char) => ({
-      char,
-      image: projectRef.current.glyphs[char].image,
-      rev: projectRef.current.glyphs[char].rev,
+    const glyphs = CHARSET.map((char) => ({ char, ...snapshot.glyphs[char] }));
+    const built = await enqueue(() => assembleFont(glyphs, snapshot.familyName, snapshot.author, current, (done, total) => {
+      if (current()) setProgress(total > 0 ? `Tracing ${done} of ${total}` : 'Making the font…');
     }));
-    const built = await enqueue(() =>
-      assembleFont(snapshot, projectRef.current.familyName, projectRef.current.author, () => true, (done, total) => {
-        setProgress(total > 0 ? `Tracing ${done} of ${total}` : 'Making the font…');
-      }),
-    );
+    if (!current()) return null;
     if (!built || built.covered.length === 0) {
       setNote('None of the drawings could be turned into letters. Try a darker stroke.');
       return null;
     }
+    setCovered(new Set(built.covered));
     const unfinished = CHARSET.filter((char) => !built.covered.includes(char));
-    if (unfinished.length > 0) {
-      const preview = unfinished.slice(0, 12).join(' ');
-      setNote(`Draw every character first. Still missing ${unfinished.length}: ${preview}${unfinished.length > 12 ? '…' : ''}.`);
-      setCovered(new Set(built.covered));
+    if (complete && unfinished.length > 0) {
+      setNote(`Draw every character before publishing. Still missing ${unfinished.length}: ${unfinished.slice(0, 12).join(' ')}.`);
       return null;
     }
-    setCovered(new Set(built.covered));
     return built;
   }
 
-  function alphabetReady(): boolean {
-    return CHARSET.every((char) => projectRef.current.glyphs[char]?.image);
-  }
-
   async function download() {
-    if (!alphabetReady() || busy) return;
+    if (busyRef.current || !filled.length) return;
+    const snapshot = projectRef.current;
+    const current = captureDraft();
+    busyRef.current = true;
     setBusy('download');
     try {
-      const built = await buildCurrentFont();
-      if (!built) return;
-      saveFontFile(built.buffer, downloadName(projectRef.current.familyName));
+      const built = await buildCurrentFont(snapshot, current, false);
+      if (!built || !current()) return;
+      saveFontFile(built.buffer, downloadName(snapshot.familyName));
       setNote('Font downloaded. Open the file to install it.');
     } catch (err) {
-      setNote(err instanceof Error ? err.message : 'Could not build the font.');
+      if (current()) setNote(err instanceof Error ? err.message : 'Could not build the font.');
     } finally {
-      setBusy(null);
-      setProgress('');
+      if (current()) { busyRef.current = false; setBusy(null); setProgress(''); }
     }
   }
 
   async function saveToLibrary(visibility: Visibility) {
-    if (!alphabetReady() || busy) return;
+    if (busyRef.current || !filled.length) return;
+    const snapshot = projectRef.current;
+    const current = captureDraft();
+    busyRef.current = true;
     setBusy('save');
     try {
-      const built = await buildCurrentFont();
-      if (!built) return;
-      setProgress('Uploading…');
-      const input = {
-        id: projectRef.current.libraryId,
-        buffer: built.buffer,
-        name: projectRef.current.familyName.trim() || 'My Hand',
-        designer: projectRef.current.author.trim(),
-        visibility,
+      // Capture the token before tracing; never upload an old draft using a later session.
+      const token = await getToken();
+      if (!current()) return;
+      const built = await buildCurrentFont(snapshot, current, visibility === 'public');
+      if (!built || !current()) return;
+      const tokenSource = async () => {
+        if (!current()) throw new Error('The draft changed. Try again.');
+        return token;
       };
+      setProgress('Uploading…');
+      const input = { id: snapshot.libraryId, buffer: built.buffer, project: snapshot,
+        name: snapshot.familyName.trim() || 'My Hand', designer: snapshot.author.trim(), visibility };
       let saved: SavedFont;
-      try {
-        saved = await saveFont(getToken, input);
-      } catch (err) {
-        if (!(err instanceof ApiError && err.status === 404 && input.id)) throw err;
-        saved = await saveFont(getToken, { ...input, id: null });
+      try { saved = await saveFont(tokenSource, input); }
+      catch (err) {
+        if (!current() || !(err instanceof ApiError && err.status === 404 && input.id)) throw err;
+        saved = await saveFont(tokenSource, { ...input, id: null });
       }
-      setProject((current) => ({ ...current, libraryId: saved.id }));
-      setLibrary((current) => current && [saved, ...current.filter((font) => font.id !== saved.id)]);
+      if (!current()) return;
+      setProject((value) => ({ ...value, libraryId: saved.id }));
+      // Invalidate older list responses so they cannot remove the newly saved entry.
+      libraryRequest.current++;
+      setLibrary((value) => [saved, ...(value ?? []).filter((font) => font.id !== saved.id)]);
       setLibraryError('');
-      setNote(visibility === 'public' ? 'Published. Your font is now in the gallery.' : 'Saved privately to My fonts.');
+      setNote(visibility === 'public' ? 'Published. Your font is now in the gallery.' : 'Saved with editable drawings to My fonts.');
     } catch (err) {
-      setNote(err instanceof Error ? err.message : 'Could not save the font.');
+      if (current()) setNote(err instanceof Error ? err.message : 'Could not save the font.');
     } finally {
-      setBusy(null);
-      setProgress('');
+      if (current()) { busyRef.current = false; setBusy(null); setProgress(''); }
     }
   }
 
   async function downloadSaved(font: SavedFont) {
+    const current = captureAccount();
     try {
       const buffer = await fetchFontFile(font, isSignedIn ? getToken : undefined);
-      saveFontFile(buffer, downloadName(font.name));
+      if (current()) saveFontFile(buffer, downloadName(font.name));
     } catch (err) {
-      setNote(err instanceof Error ? err.message : 'Could not download that font.');
+      if (current()) setNote(err instanceof Error ? err.message : 'Could not download that font.');
     }
   }
 
   async function changeVisibility(font: SavedFont, visibility: Visibility) {
+    if (busyFontRef.current) return;
+    const current = captureAccount();
+    busyFontRef.current = true;
     setBusyFont(font.id);
     try {
       const updated = await setFontVisibility(getToken, font.id, visibility);
-      setLibrary((current) => current?.map((item) => (item.id === updated.id ? updated : item)) ?? null);
+      if (!current()) return;
+      libraryRequest.current++;
+      setLibrary((value) => value?.map((item) => item.id === updated.id ? updated : item) ?? null);
       setNote(visibility === 'public' ? `${font.name} is now public.` : `${font.name} is now private.`);
     } catch (err) {
-      setNote(err instanceof Error ? err.message : 'Could not change that font.');
+      if (current()) setNote(err instanceof Error ? err.message : 'Could not change that font.');
     } finally {
-      setBusyFont(null);
+      if (current()) { busyFontRef.current = false; setBusyFont(null); }
     }
   }
 
   async function removeSaved(font: SavedFont) {
+    if (busyFontRef.current) return;
+    const current = captureAccount();
+    busyFontRef.current = true;
     setBusyFont(font.id);
     try {
       await deleteFont(getToken, font.id);
-      setLibrary((current) => current?.filter((item) => item.id !== font.id) ?? null);
-      if (projectRef.current.libraryId === font.id) setProject((current) => ({ ...current, libraryId: null }));
+      if (!current()) return;
+      libraryRequest.current++;
+      setLibrary((value) => value?.filter((item) => item.id !== font.id) ?? null);
+      if (projectRef.current.libraryId === font.id) setProject((value) => ({ ...value, libraryId: null }));
       setNote(`Deleted ${font.name}.`);
     } catch (err) {
-      setNote(err instanceof Error ? err.message : 'Could not delete that font.');
+      if (current()) setNote(err instanceof Error ? err.message : 'Could not delete that font.');
     } finally {
-      setBusyFont(null);
+      if (current()) { busyFontRef.current = false; setBusyFont(null); }
+    }
+  }
+
+  function replaceProject(next: Project) {
+    invalidateDraft();
+    busyRef.current = false;
+    setBusy(null);
+    setProgress('');
+    undoRef.current = [];
+    setCanUndo(false);
+    clearFontCache();
+    clearPreview();
+    setCovered(new Set());
+    projectRef.current = next;
+    setProject(next);
+    setActive('A');
+    setPhoto((value) => { value?.bitmap.close(); return null; });
+    setMode('draw');
+  }
+
+  async function openSaved(font: SavedFont) {
+    if (busyFontRef.current || !owner) return;
+    const current = captureDraft();
+    const accountCurrent = captureAccount();
+    busyFontRef.current = true;
+    setBusyFont(font.id);
+    try {
+      let next: Project;
+      try { next = normalizeProject(await fetchFontProject(getToken, font.id)); }
+      catch (err) {
+        if (!current() || !(err instanceof ApiError && err.status === 409)) throw err;
+        next = await projectFromFont(await fetchFontFile(font, getToken), font.name, font.designer);
+      }
+      if (!current()) return;
+      await saveProject(projectRef.current, owner);
+      if (!current()) return;
+      const restored = { ...next, draftId: crypto.randomUUID(), libraryId: font.id };
+      await saveProject(restored, owner);
+      if (!current()) return;
+      replaceProject(restored);
+      setNote(`Opened ${font.name}. Your previous draft is kept in My fonts on this browser.`);
+    } catch (err) {
+      if (current()) setNote(err instanceof Error ? err.message : 'Could not open that font.');
+    } finally {
+      // Replacing a draft invalidates current(), but this account still owns the library action.
+      if (accountCurrent()) { busyFontRef.current = false; setBusyFont(null); }
+    }
+  }
+
+  async function resumeDraft(id: string) {
+    if (!owner || busyFontRef.current) return;
+    const current = captureDraft();
+    const accountCurrent = captureAccount();
+    busyFontRef.current = true;
+    setBusyFont(id);
+    try {
+      const next = await loadDraft(owner, id);
+      if (!current() || !next) return;
+      await saveProject(projectRef.current, owner);
+      if (!current()) return;
+      await saveProject(next, owner);
+      if (!current()) return;
+      replaceProject(next);
+      setNote(`Resumed ${next.familyName}.`);
+    } catch (err) {
+      if (current()) setNote(err instanceof Error ? err.message : 'Could not restore the draft.');
+    } finally {
+      if (accountCurrent()) { busyFontRef.current = false; setBusyFont(null); }
     }
   }
 
@@ -503,20 +644,24 @@ export function App() {
     setMode(next);
   }
 
-  function startOver() {
-    undoRef.current = [];
-    setCanUndo(false);
-    clearFontCache();
-    clearPreview();
-    setCovered(new Set());
-    setProject(emptyProject());
-    setActive('A');
-    setPhoto((current) => {
-      current?.bitmap.close?.();
-      return null;
-    });
-    setMode('draw');
-    setNote('Started a new font.');
+  async function startOver() {
+    if (!owner || busyFontRef.current) return;
+    const current = captureDraft();
+    const accountCurrent = captureAccount();
+    busyFontRef.current = true;
+    try {
+      await saveProject(projectRef.current, owner);
+      if (!current()) return;
+      const next = emptyProject();
+      await saveProject(next, owner);
+      if (!current()) return;
+      replaceProject(next);
+      setNote('Started a new font. Your previous draft is kept in My fonts on this browser.');
+    } catch {
+      if (current()) setNote('Could not keep your current draft. Free some browser storage and try again.');
+    } finally {
+      if (accountCurrent()) busyFontRef.current = false;
+    }
   }
 
   function nextBlank() {
@@ -537,17 +682,30 @@ export function App() {
   }
 
   async function nudge(dx: number, dy: number) {
-    const image = project.glyphs[active]?.image;
-    if (!image) return;
-    const next = await nudgeImage(image, dx, dy);
-    commit(active, next);
+    const char = active;
+    const glyph = projectRef.current.glyphs[char];
+    if (!glyph.image) return;
+    if (dx) {
+      const offsetX = Math.max(-240, Math.min(240, glyph.offsetX + dx));
+      if (offsetX === glyph.offsetX) return;
+      undoRef.current.push({ type: 'glyph', char, glyph: { ...glyph } });
+      if (undoRef.current.length > 40) undoRef.current.shift();
+      setCanUndo(true);
+      setProject((value) => ({ ...value, glyphs: { ...value.glyphs,
+        [char]: { ...value.glyphs[char], offsetX, rev: value.glyphs[char].rev + 1 } } }));
+      return;
+    }
+    const current = captureDraft();
+    const next = await nudgeImage(glyph.image, 0, dy);
+    if (current() && projectRef.current.glyphs[char] === glyph) commit(char, next);
   }
 
 
   if (!ready) {
     return (
       <div className="boot">
-        <p>Handpress</p>
+        <p>{loadError || 'Handpress'}</p>
+        {loadError && <button type="button" className="primary" onClick={() => setLoadAttempt((value) => value + 1)}>Retry loading drawings</button>}
       </div>
     );
   }
@@ -594,7 +752,7 @@ export function App() {
                 <button
                   type="button"
                   className="primary"
-                  disabled={filled.length !== CHARSET.length || busy !== null}
+                  disabled={filled.length === 0 || busy !== null}
                   onClick={() => void download()}
                 >
                   {busy === 'download' ? progress || 'Making the font…' : 'Download font'}
@@ -650,6 +808,10 @@ export function App() {
             fonts={library}
             error={libraryError}
             currentId={project.libraryId}
+            currentDraftId={project.draftId}
+            drafts={drafts}
+            onResume={(id) => void resumeDraft(id)}
+            onEdit={(font) => void openSaved(font)}
             busyId={busyFont}
             load={(font) => fetchFontFile(font, getToken)}
             onVisibility={(font, visibility) => void changeVisibility(font, visibility)}
@@ -666,11 +828,13 @@ export function App() {
           <Rail active={active} glyphs={project.glyphs} onPick={setActive} />
           <section className="stage-col">
             <Board
+              key={project.draftId}
               char={active}
               label={charLabel(active)}
               image={project.glyphs[active]?.image ?? null}
               tool={tool}
               width={width}
+              offsetX={project.glyphs[active].offsetX}
               onCommit={(image) => commit(active, image)}
               onFile={(file) => void onLetterFile(file)}
               aside={
@@ -757,7 +921,7 @@ export function App() {
             onDownload={() => void download()}
             onSave={(visibility) => void saveToLibrary(visibility)}
             onOpenLibrary={() => setMode('library')}
-            onReset={startOver}
+            onReset={() => void startOver()}
           />
         </main>
       )}
