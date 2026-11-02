@@ -20,9 +20,10 @@ type Props = {
   onCommit: (image: string | null) => void;
   onFile: (file: File) => void;
   aside?: ReactNode;
+  navigation?: ReactNode;
 };
 
-export function Board({ char, label, image, tool, width, offsetX = 0, onCommit, onFile, aside }: Props) {
+export function Board({ char, label, image, tool, width, offsetX = 0, onCommit, onFile, aside, navigation }: Props) {
   const viewRef = useRef<HTMLCanvasElement>(null);
   const maskRef = useRef<HTMLCanvasElement | null>(null);
   const loadedKey = useRef('');
@@ -230,6 +231,7 @@ export function Board({ char, label, image, tool, width, offsetX = 0, onCommit, 
         </div>
         {aside}
       </div>
+      {navigation}
       <canvas
         ref={viewRef}
         className={tool === 'eraser' ? 'board eraser' : 'board'}

@@ -11,7 +11,8 @@
     "dev:web": "vite",
     "dev:api": "tsx watch server/index.ts",
     "start": "tsx server/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:auth": "tsx scripts/check-auth.ts"
   },
   "dependencies": {
     "@clerk/backend": "^3.25.0",

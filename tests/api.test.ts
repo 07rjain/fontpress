@@ -67,6 +67,11 @@ test('private source and compiled font round-trip together; only the owner can r
   expect(downloaded.headers.get('Content-Type')).toBe('font/otf');
   expect(downloaded.headers.get('Content-Disposition')).toContain('Brush.otf');
   expect(new Uint8Array(await downloaded.arrayBuffer())).toEqual(new Uint8Array(bytes));
+  // Previewing and editing a private draft remain possible; downloading requires completion.
+  db.prepare('update fonts set glyph_count = 85 where id = ?').run(font.id);
+  const partialDownload = await request(`/api/fonts/${font.id}/file?download=1`);
+  expect(partialDownload.status).toBe(400);
+  expect((await partialDownload.json()).error).toContain('85');
   const promotion = await request(`/api/fonts/${font.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ visibility: 'public' }) });
   expect(promotion.status).toBe(400);
   const updated = await request(`/api/fonts/${font.id}`, { method: 'PUT', body: upload(fullFont, fullProject, 'public', 'Completed') });
@@ -74,6 +79,11 @@ test('private source and compiled font round-trip together; only the owner can r
   const publicFile = await request(`/api/fonts/${font.id}/file`, {}, '');
   expect(publicFile.status).toBe(200);
   expect(new Uint8Array(await publicFile.arrayBuffer())).toEqual(new Uint8Array(fullFont));
+  const completeDownload = await request(`/api/fonts/${font.id}/file?download=1`, {}, '');
+  expect(completeDownload.status).toBe(200);
+  expect(completeDownload.headers.get('Content-Type')).toBe('application/octet-stream');
+  expect(completeDownload.headers.get('Content-Disposition')).toBe('attachment; filename="Completed.otf"');
+  expect(new Uint8Array(await completeDownload.arrayBuffer())).toEqual(new Uint8Array(fullFont));
   const publicList = await (await request('/api/fonts/public', {}, '')).json();
   expect(publicList.fonts).toHaveLength(1);
   expect(publicList.fonts[0].name).toBe('Completed');

@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fonts, readFontFile, removeFontFile, type FontRow, type Visibility } from './db';
 import { inspectFont } from './inspect';
-import { CHARSET } from '../src/spec';
+import { CHARSET, fontFileName } from '../src/spec';
 import { readProjectUpload } from './project';
 import { fontFormat } from '../src/fontFormat';
 
@@ -39,11 +39,6 @@ function toPublic(row: FontRow) {
     updatedAt: row.updated_at,
     editable: Boolean(row.editable),
   };
-}
-
-function fileName(name: string, extension: string) {
-  const base = name.replace(/[^A-Za-z0-9 _-]/g, '').trim().replace(/\s+/g, '-') || 'handpress-font';
-  return `${base}.${extension}`;
 }
 
 async function readUpload(c: Context<Env>) {
@@ -201,10 +196,17 @@ app.get('/api/fonts/:id/file', async (c) => {
   }
   const bytes = fonts.content(row.id)?.font_data ?? await readFontFile(row.id).catch(() => null);
   if (!bytes) return c.json({ error: 'Font not found.' }, 404);
+  const download = c.req.query('download') === '1';
+  if (download) {
+    const inspected = inspectFont(bytes);
+    if (!inspected || inspected.missing.length > 0) {
+      return c.json({ error: `Finish all ${CHARSET.length} characters before downloading.` }, 400);
+    }
+  }
   const format = fontFormat(bytes);
   return c.body(new Uint8Array(bytes), 200, {
-    'Content-Type': format.mime,
-    'Content-Disposition': `attachment; filename="${fileName(row.name, format.extension)}"`,
+    'Content-Type': download ? 'application/octet-stream' : format.mime,
+    'Content-Disposition': `${download ? 'attachment' : 'inline'}; filename="${fontFileName(row.name, format.extension)}"`,
     'Cache-Control': row.visibility === 'public' ? 'public, max-age=300' : 'private, no-store',
     'X-Content-Type-Options': 'nosniff',
   });

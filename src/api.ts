@@ -95,8 +95,8 @@ export async function deleteFont(getToken: TokenSource, id: string): Promise<voi
   await call(`/api/fonts/${id}`, { method: 'DELETE' }, getToken);
 }
 
-export async function fetchFontFile(font: SavedFont, getToken?: TokenSource): Promise<ArrayBuffer> {
-  const response = await call(`/api/fonts/${font.id}/file?v=${font.updatedAt}`, {}, getToken);
+export async function fetchFontFile(font: SavedFont, getToken?: TokenSource, download = false): Promise<ArrayBuffer> {
+  const response = await call(`/api/fonts/${font.id}/file?v=${font.updatedAt}${download ? '&download=1' : ''}`, {}, getToken);
   return response.arrayBuffer();
 }
 import { fontFormat } from './fontFormat';

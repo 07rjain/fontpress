@@ -1,6 +1,6 @@
 # Handpress
 
-Handpress turns handwriting into an installable OpenType font. Draw on the board, import an individual letter, or print and photograph the two-page handwriting template. Preview your writing, download a partial font, save an editable private copy, or publish a complete font to the gallery.
+Handpress turns handwriting into an installable OpenType font. Draw on the board, import an individual letter, or print and photograph the two-page handwriting template. Preview your writing, save an editable private draft, and complete all 85 characters before downloading or publishing your font.
 
 ## Run locally
 
@@ -21,7 +21,8 @@ Open `http://localhost:5173`. Vite proxies `/api` to the API on port 8787. If yo
 
 ## Fonts and drafts
 
-- **Draw and download:** one usable character is enough to download an `.otf` and test it locally. Characters you have not drawn are absent from the font. Generated outlines use OpenType/CFF, with the matching extension and MIME type.
+- **Draw and download:** all 85 required characters must have usable outlines before downloading an `.otf`. Both studio download buttons and saved-font downloads enforce completion. Generated outlines use OpenType/CFF. Font previews use `font/otf`; downloads use a binary attachment with a single `.otf` filename to avoid mobile download managers appending a second font extension.
+- **Move between letters:** Previous and Next sit above the drawing canvas with a position counter. Completed strokes stay with their original character; navigation wraps at either end of the character set.
 - **Spacing:** left/right nudges shift the letter within its advance width. They are saved independently of the raster drawing and survive preview, export, undo, and reopening. Up/down nudges move the drawing vertically.
 - **Private saves:** save a partial or complete font from Specimen. Both the compiled font and editable drawings are kept in your account. Choose **Edit** in My fonts to continue on another device. Saving again updates that entry.
 - **New fonts and local recovery:** starting a new font or opening another one preserves the previous draft. My fonts lists drafts on the current browser with a **Resume draft** action. These local copies are scoped to your account in IndexedDB. Clearing site data removes them; use a private save for an account-backed copy.
@@ -58,3 +59,15 @@ npm run build
 Tests use temporary SQLite databases and in-memory IndexedDB. API integration tests simulate verified identities at the Clerk boundary; they do not call Clerk or verify real session signatures. Canvas checks use a native raster implementation under jsdom. They do not establish compatibility with every browser or operating-system font installer.
 
 Before a production release, also check real Clerk sign-in/sign-out and account switching, mouse/touch/stylus drawing, printing both template pages, importing photographs from a phone, and installation of a downloaded font on the operating systems you support.
+
+## Authentication connection troubleshooting
+
+If production reports `failed_to_load_clerk_js` or `ERR_CONNECTION_CLOSED`, test the production authentication hostname explicitly:
+
+```sh
+npm run check:auth -- --host clerk.fontpress.subdomain.wtf --origin https://fontpress.subdomain.wtf
+```
+
+This command checks DNS, TLS, the JavaScript response, and the Clerk Frontend API. The default `npm run check:auth` checks the local publishable key instead; a successful development-instance check does not prove production is configured correctly. See [the exact production DNS records and Vercel steps](docs/clerk-production-dns.md).
+
+The app now shows a sign-in connection error with a retry button when Clerk fails or remains unavailable, rather than waiting indefinitely on the boot screen. This recovery screen does not repair DNS; the production hostname must route to Clerk and have a valid certificate.

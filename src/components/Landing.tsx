@@ -20,6 +20,42 @@ const FACES = ['serif', 'hand', 'poster', 'sans', 'mono', 'italic'] as const;
 const PENNANTS = 22;
 const HEADLINERS = 3;
 
+function FestivalLights() {
+  return (
+    <div className="festival-lights" aria-hidden="true">
+      <svg className="festoon" viewBox="0 0 1160 100" fill="none" focusable="false">
+        <path className="festoon-wire" d="M0 6 Q580 120 1160 6" />
+        {Array.from({ length: 20 }, (_, i) => {
+          const t = (i + 0.5) / 20;
+          const x = t * 1160;
+          const y = 6 + 228 * t * (1 - t);
+          return (
+            <g key={i} className="festoon-lamp" style={{ '--i': i } as React.CSSProperties}>
+              <path className="festoon-drop" d={`M${x} ${y}v8`} />
+              <ellipse className="festoon-glow" cx={x} cy={y + 15} rx="19" ry="23" />
+              <rect className="festoon-cap" x={x - 2.5} y={y + 7} width="5" height="4" rx="1" />
+              <ellipse className="festoon-bulb" cx={x} cy={y + 15} rx="4" ry="6" />
+            </g>
+          );
+        })}
+      </svg>
+      {[0, 1].map((burst) => (
+        <svg key={burst} className={`festival-firework festival-firework-${burst}`} viewBox="0 0 100 100" fill="none" focusable="false">
+          <g className="firework-rays">
+            {Array.from({ length: 12 }, (_, i) => (
+              <g key={i} transform={`rotate(${i * 30} 50 50)`}>
+                <path d={`M50 ${i % 2 ? 18 : 10}v${i % 2 ? 9 : 15}`} />
+                <circle cx="50" cy={i % 2 ? 10 : 3} r="1.5" fill="currentColor" stroke="none" />
+              </g>
+            ))}
+          </g>
+          <path className="firework-star" d="M50 39Q51 49 61 50Q51 51 50 61Q49 51 39 50Q49 49 50 39Z" fill="currentColor" stroke="none" />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
 const MARQUEE = [
   ['The quick brown fox jumps over the lazy dog', 'serif'],
   ['Sphinx of black quartz, judge my vow', 'hand'],
@@ -86,6 +122,7 @@ export function Landing({
   return (
     <div className="landing festival">
       <section className="fest-hero">
+        <FestivalLights />
         <div className="bunting" aria-hidden="true">
           {Array.from({ length: PENNANTS }, (_, i) => (
             <i key={i} style={{ '--i': i } as React.CSSProperties} />

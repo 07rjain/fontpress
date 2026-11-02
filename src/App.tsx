@@ -12,6 +12,7 @@ import {
   type Visibility,
 } from './api';
 import { AuthGate } from './components/AuthGate';
+import { AuthStartup } from './components/AuthStartup';
 import { Board } from './components/Board';
 import { Landing } from './components/Landing';
 import { Rail } from './components/Rail';
@@ -73,7 +74,7 @@ function urlFor(mode: Mode): string {
 
 export function App() {
   const { isLoaded, userId } = useAuth();
-  if (!isLoaded) return <div className="boot"><p>Handpress</p></div>;
+  if (!isLoaded) return <AuthStartup />;
   return <Suspense fallback={<div className="boot"><p>Loading the studio…</p></div>}>
     <Studio key={userId ?? 'guest'} />
   </Suspense>;
@@ -254,6 +255,9 @@ function Studio() {
   }, [note]);
 
   const filled = CHARSET.filter((char) => project.glyphs[char]?.image);
+  const activeIndex = CHARSET.indexOf(active);
+  const previousChar = CHARSET[(activeIndex - 1 + CHARSET.length) % CHARSET.length];
+  const nextChar = CHARSET[(activeIndex + 1) % CHARSET.length];
   const signature = filled.map((char) => `${char}:${project.glyphs[char].rev}:${project.glyphs[char].offsetX}`).join('|');
 
   useEffect(() => {
@@ -335,6 +339,10 @@ function Studio() {
     });
   }, []);
 
+  const moveLetter = useCallback((direction: -1 | 1) => {
+    setActive((char) => CHARSET[(CHARSET.indexOf(char) + direction + CHARSET.length) % CHARSET.length]);
+  }, []);
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -347,9 +355,7 @@ function Studio() {
       if (mode !== 'draw' || !ownerRef.current) return;
       if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
         event.preventDefault();
-        const index = CHARSET.indexOf(active);
-        const next = event.key === 'ArrowRight' ? index + 1 : index - 1;
-        setActive(CHARSET[(next + CHARSET.length) % CHARSET.length]);
+        moveLetter(event.key === 'ArrowRight' ? 1 : -1);
       } else if (event.key.toLowerCase() === 'b' && !event.metaKey && !event.ctrlKey) {
         setTool('pen');
       } else if (event.key.toLowerCase() === 'e' && !event.metaKey && !event.ctrlKey) {
@@ -361,7 +367,7 @@ function Studio() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [active, commit, mode, undo]);
+  }, [active, commit, mode, moveLetter, undo]);
 
   async function onSheetFile(file: File | undefined) {
     if (!file) return;
@@ -444,20 +450,25 @@ function Studio() {
     setCovered(new Set(built.covered));
     const unfinished = CHARSET.filter((char) => !built.covered.includes(char));
     if (complete && unfinished.length > 0) {
-      setNote(`Draw every character before publishing. Still missing ${unfinished.length}: ${unfinished.slice(0, 12).join(' ')}.`);
+      setNote(`Draw every character before downloading or publishing. Still missing ${unfinished.length}: ${unfinished.slice(0, 12).join(' ')}.`);
       return null;
     }
     return built;
   }
 
   async function download() {
-    if (busyRef.current || !filled.length) return;
+    if (busyRef.current) return;
     const snapshot = projectRef.current;
+    const remaining = CHARSET.filter((char) => !snapshot.glyphs[char]?.image).length;
+    if (remaining > 0) {
+      setNote(`Finish all ${CHARSET.length} characters before downloading. ${remaining} still to draw.`);
+      return;
+    }
     const current = captureDraft();
     busyRef.current = true;
     setBusy('download');
     try {
-      const built = await buildCurrentFont(snapshot, current, false);
+      const built = await buildCurrentFont(snapshot, current, true);
       if (!built || !current()) return;
       saveFontFile(built.buffer, downloadName(snapshot.familyName));
       setNote('Font downloaded. Open the file to install it.');
@@ -508,9 +519,13 @@ function Studio() {
   }
 
   async function downloadSaved(font: SavedFont) {
+    if (font.glyphCount !== CHARSET.length) {
+      setNote(`Finish all ${CHARSET.length} characters before downloading. Choose Edit to continue this font.`);
+      return;
+    }
     const current = captureAccount();
     try {
-      const buffer = await fetchFontFile(font, isSignedIn ? getToken : undefined);
+      const buffer = await fetchFontFile(font, isSignedIn ? getToken : undefined, true);
       if (current()) saveFontFile(buffer, downloadName(font.name));
     } catch (err) {
       if (current()) setNote(err instanceof Error ? err.message : 'Could not download that font.');
@@ -752,7 +767,8 @@ function Studio() {
                 <button
                   type="button"
                   className="primary"
-                  disabled={filled.length === 0 || busy !== null}
+                  disabled={filled.length !== CHARSET.length || busy !== null}
+                  title={filled.length !== CHARSET.length ? `Finish all ${CHARSET.length} characters to download (${filled.length} drawn)` : undefined}
                   onClick={() => void download()}
                 >
                   {busy === 'download' ? progress || 'Making the font…' : 'Download font'}
@@ -837,6 +853,30 @@ function Studio() {
               offsetX={project.glyphs[active].offsetX}
               onCommit={(image) => commit(active, image)}
               onFile={(file) => void onLetterFile(file)}
+              navigation={
+                <nav className="letter-navigation" aria-label="Letter navigation">
+                  <button
+                    type="button"
+                    className="letter-step"
+                    aria-label={`Previous letter: ${charLabel(previousChar)}`}
+                    onClick={() => moveLetter(-1)}
+                  >
+                    <span aria-hidden="true">←</span> Previous
+                  </button>
+                  <span className="letter-position" aria-live="polite" aria-atomic="true">
+                    <span className="sr-only">Letter </span>{activeIndex + 1}
+                    <span aria-hidden="true"> / </span><span className="sr-only"> of </span>{CHARSET.length}
+                  </span>
+                  <button
+                    type="button"
+                    className="letter-step letter-step-next"
+                    aria-label={`Next letter: ${charLabel(nextChar)}`}
+                    onClick={() => moveLetter(1)}
+                  >
+                    Next <span aria-hidden="true">→</span>
+                  </button>
+                </nav>
+              }
               aside={
                 <figure className="in-font" aria-label={`${charLabel(active)} in the font`}>
                   <span className={covered.has(active) ? 'mine' : 'gap'}>{active}</span>

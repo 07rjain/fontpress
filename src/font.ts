@@ -1,7 +1,7 @@
 import type opentype from 'opentype.js';
 import type { Cmd } from './paths';
 import { shiftX } from './paths';
-import { FONT, GUIDES, glyphPixelSize, glyphName, postScriptName, safeFamily, CHARSET } from './spec';
+import { FONT, GUIDES, glyphPixelSize, glyphName, postScriptName, safeFamily, CHARSET, fontFileName } from './spec';
 import { fontFormat } from './fontFormat';
 import { emptyProject } from './project';
 import { createMask, maskToUrl } from './draw';
@@ -145,12 +145,16 @@ export function clearPreview() {
 
 export function saveFontFile(buffer: ArrayBuffer, filename: string) {
   const format = fontFormat(buffer);
-  const blob = new Blob([buffer], { type: format.mime });
+  // Let download managers infer their local font MIME from the explicit filename.
+  // Android's font MIME mappings can otherwise append a second extension.
+  const blob = new Blob([buffer], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = filename.replace(/\.(?:ttf|otf)$/i, `.${format.extension}`);
+  link.download = fontFileName(filename, format.extension);
+  document.body.append(link);
   link.click();
+  link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 

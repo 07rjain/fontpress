@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { SavedFont, Visibility } from '../api';
-import { CHARSET, GROUPS, SAMPLES } from '../spec';
+import { CHARSET, GROUPS, SAMPLES, fontFileName } from '../spec';
 import { relativeTime } from './FontCard';
 
 export type Busy = 'download' | 'save' | null;
@@ -142,12 +142,12 @@ export function Specimen({
               <span>Designer</span>
               <input value={author} onChange={(event) => onAuthor(event.target.value)} placeholder="Your name" maxLength={60} />
             </label>
-            <button type="button" className="primary wide" disabled={filled === 0 || busy !== null} onClick={onDownload}>
-              {busy === 'download' ? progress || 'Making the font…' : `Download ${title}.otf`}
+            <button type="button" className="primary wide" disabled={!complete || busy !== null} onClick={onDownload}>
+              {busy === 'download' ? progress || 'Making the font…' : `Download ${fontFileName(title)}`}
             </button>
             {!complete && (
               <p className="install">
-                {filled === 0 ? 'Draw a character to download or save your font.' : `You can test this partial font now. ${remaining} characters remain before publishing.`}
+                Finish all {CHARSET.length} characters to download your font. {remaining} still to draw. You can save your progress privately.
               </p>
             )}
             <p className="install">
@@ -168,7 +168,7 @@ export function Specimen({
                 />
                 <span>
                   <strong>Private</strong>
-                  <small>Only you can see and download it.</small>
+                  <small>Only you can see and continue editing it.</small>
                 </span>
               </label>
               <label className={visibility === 'public' ? 'choice-option on' : 'choice-option'}>

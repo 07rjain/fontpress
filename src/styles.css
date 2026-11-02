@@ -26,6 +26,17 @@
 }
 
 * { box-sizing: border-box; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
 html, body, #root { margin: 0; min-height: 100%; }
 body {
   background:
@@ -284,10 +295,64 @@ input[type='range']::-moz-range-thumb {
 
 .fest-hero {
   position: relative;
+  isolation: isolate;
   max-width: 1160px;
   margin: 0 auto;
   padding: 58px 28px 40px;
   text-align: center;
+}
+.festival-lights {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 17% 12%, rgba(244, 191, 92, 0.14), transparent 36%),
+    radial-gradient(ellipse at 86% 24%, rgba(196, 85, 58, 0.06), transparent 30%);
+}
+.festoon { display: block; width: 100%; height: auto; overflow: visible; }
+.festoon-wire, .festoon-drop { stroke: #8f8064; stroke-width: 1; }
+.festoon-cap { fill: #817256; }
+.festoon-lamp { color: #d9a53a; }
+.festoon-lamp:nth-of-type(3n + 2) { color: #c4553a; }
+.festoon-lamp:nth-of-type(3n) { color: #84966a; }
+.festoon-glow { fill: currentColor; opacity: 0.1; }
+.festoon-bulb {
+  fill: #fff6d6;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 4px #edb94d);
+}
+.festoon-lamp {
+  animation: festival-welcome-glow 2s ease-in-out 2;
+  animation-delay: calc(var(--i) * 0.035s);
+}
+.festival-firework {
+  position: absolute;
+  width: clamp(56px, 8vw, 94px);
+  color: #bb8732;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.festival-firework-0 { left: 3%; top: 162px; }
+.festival-firework-1 { right: 3%; top: 225px; color: #bf7861; }
+.firework-rays {
+  opacity: 0.38;
+  transform-origin: 50px 50px;
+  animation: festival-welcome-burst 2s ease-out 2 both;
+}
+.festival-firework-1 .firework-rays { animation-delay: 0.7s; }
+.firework-star { opacity: 0.65; }
+@keyframes festival-welcome-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+@keyframes festival-welcome-burst {
+  0% { opacity: 0; transform: scale(0.25) rotate(-8deg); }
+  25% { opacity: 0.7; }
+  65%, 100% { opacity: 0.38; transform: scale(1) rotate(0); }
 }
 .bunting {
   display: flex;
@@ -520,7 +585,8 @@ input[type='range']::-moz-range-thumb {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bunting i, .marquee-track, .glyph { animation: none; }
+  .bunting i, .marquee-track, .glyph,
+  .festoon-lamp, .firework-rays { animation: none; }
 }
 
 /* ---------- draw ---------- */
@@ -566,6 +632,33 @@ input[type='range']::-moz-range-thumb {
 .board-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
 .board-head h2 { font-family: var(--serif); font-size: 28px; font-weight: 560; letter-spacing: -0.03em; }
 .board-head p { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.letter-navigation {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.letter-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+.letter-step:hover { background: var(--paper); }
+.letter-step-next { background: var(--moss); border-color: var(--moss); color: var(--white); }
+.letter-step-next:hover { background: var(--moss-deep); }
+.letter-step:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.letter-position { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .in-font {
   margin: 0;
   flex: none;
@@ -770,6 +863,7 @@ input[type='range']::-moz-range-thumb {
 /* ---------- sign-in gate ---------- */
 
 .gate { flex: 1; display: grid; place-items: center; padding: 64px 20px; }
+.auth-startup { min-height: 100dvh; }
 .gate-card {
   max-width: 520px;
   text-align: center;
@@ -931,6 +1025,9 @@ input[type='range']::-moz-range-thumb {
   .specimen-page { padding: 28px 16px 56px; }
   .coverage-row { grid-template-columns: 1fr; gap: 4px; }
   .fest-hero { padding: 36px 18px 28px; }
+  .festival-firework { width: 38px; }
+  .festival-firework-0 { left: 5px; top: 8px; }
+  .festival-firework-1 { right: 5px; top: 8px; }
   .bunting { margin-bottom: 24px; gap: 4px; }
   .bunting i { height: 22px; }
   .fest-hero .lede { font-size: 17px; }

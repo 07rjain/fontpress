@@ -251,11 +251,11 @@ export function postScriptName(name: string): string {
   return clean.slice(0, 31);
 }
 
-export function fontFileName(name: string): string {
-  const clean = safeFamily(name)
+export function fontFileName(name: string, extension: 'otf' | 'ttf' = 'otf'): string {
+  const clean = safeFamily(name.trim().replace(/(?:\.(?:ttf|otf))+$/i, ''))
     .replace(/\s+/g, '-')
     .replace(/[^A-Za-z0-9-]/g, '');
-  return `${clean || 'My-Hand'}.otf`;
+  return `${clean || 'My-Hand'}.${extension}`;
 }
 
 function assertSpec() {

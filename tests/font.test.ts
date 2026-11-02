@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-import { beforeEach, expect, test } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
 import opentype from 'opentype.js';
-import { assembleFont, clearFontCache, projectFromFont } from '../src/font';
+import { assembleFont, clearFontCache, projectFromFont, saveFontFile } from '../src/font';
 import { fontFileName, glyphPixelSize } from '../src/spec';
 import { fillRect, makeRaster, prepareCell } from '../src/raster';
 import { fontFormat } from '../src/fontFormat';
-import { letterPng } from './fixtures';
+import { fontFixture, letterPng } from './fixtures';
 import { installCanvas } from './canvas';
 
 beforeEach(() => { installCanvas(); clearFontCache(); });
@@ -21,7 +21,7 @@ test('transparent artwork preserves the same ink as artwork on white paper', () 
   expect(result).toEqual(prepareCell(paper, 46));
 });
 
-test('horizontal spacing survives serialization and partial exports use the correct OpenType format', async () => {
+test('horizontal spacing survives serialization and generated fonts use the correct OpenType format', async () => {
   const image = letterPng();
   const original = await assembleFont([{ char: 'A', image, rev: 1, offsetX: 0 }], 'Example', '', () => true);
   const nudged = await assembleFont([{ char: 'A', image, rev: 1, offsetX: 20 }], 'Example', '', () => true);
@@ -34,6 +34,25 @@ test('horizontal spacing survives serialization and partial exports use the corr
   expect(new TextDecoder().decode(new Uint8Array(nudged!.buffer).slice(0, 4))).toBe('OTTO');
   expect(fontFormat(nudged!.buffer)).toEqual({ extension: 'otf', mime: 'font/otf' });
   expect(fontFileName('Example')).toBe('Example.otf');
+});
+
+test.each(['Brush', 'Brush.otf', 'Brush.ttf', 'Brush.otf.ttf'])('downloading %s uses one OpenType extension and preserves the font bytes', async (name) => {
+  const bytes = fontFixture(['A']);
+  let file!: Blob;
+  URL.createObjectURL = (blob: Blob | MediaSource) => { file = blob as Blob; return 'blob:font'; };
+  URL.revokeObjectURL = () => {};
+  let filename = '';
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) { filename = this.download; });
+  saveFontFile(bytes, name);
+  expect(filename).toBe('Brush.otf');
+  expect(file.type).toBe('application/octet-stream');
+  const savedBytes = await new Promise<ArrayBuffer>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+  expect(new Uint8Array(savedBytes)).toEqual(new Uint8Array(bytes));
 });
 
 test('older compiled fonts can be recovered into editable drawings', async () => {

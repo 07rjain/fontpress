@@ -111,9 +111,12 @@ export function Library({ fonts, error, currentId, currentDraftId, drafts, onRes
                     <button type="button" className="primary" disabled={busy} onClick={() => onEdit(font)}>
                       {busyId === font.id ? 'Working…' : 'Edit'}
                     </button>
-                    <button type="button" className="ghost" onClick={() => onDownload(font)}>
+                    <button type="button" className="ghost" disabled={font.glyphCount !== CHARSET.length}
+                      title={font.glyphCount !== CHARSET.length ? `Finish all ${CHARSET.length} characters to download. Choose Edit to continue.` : undefined}
+                      onClick={() => onDownload(font)}>
                       Download
                     </button>
+                    {font.glyphCount !== CHARSET.length && <span className="meta">Finish all {CHARSET.length} characters to download.</span>}
                     <button
                       type="button"
                       className="ghost"
