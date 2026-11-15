@@ -304,7 +304,7 @@ input[type='range']::-moz-range-thumb {
   isolation: isolate;
   max-width: 1160px;
   margin: 0 auto;
-  padding: 58px 28px 40px;
+  padding: 128px 28px 40px;
   text-align: center;
 }
 .festival-lights {
@@ -317,7 +317,16 @@ input[type='range']::-moz-range-thumb {
     radial-gradient(ellipse at 17% 12%, rgba(244, 191, 92, 0.14), transparent 36%),
     radial-gradient(ellipse at 86% 24%, rgba(196, 85, 58, 0.06), transparent 30%);
 }
-.festoon { display: block; width: 100%; height: auto; overflow: visible; }
+.festoon {
+  position: relative;
+  left: 50%;
+  display: block;
+  width: 100%;
+  min-width: 680px;
+  height: auto;
+  overflow: visible;
+  transform: translateX(-50%);
+}
 .festoon-wire, .festoon-drop { stroke: #8f8064; stroke-width: 1; }
 .festoon-cap { fill: #817256; }
 .festoon-lamp { color: #d9a53a; }
@@ -360,28 +369,16 @@ input[type='range']::-moz-range-thumb {
   25% { opacity: 0.7; }
   65%, 100% { opacity: 0.38; transform: scale(1) rotate(0); }
 }
-.bunting {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  margin: 0 auto 36px;
-  max-width: 760px;
-  padding-top: 2px;
-  border-top: 2px solid var(--ink);
-}
-.bunting i {
-  flex: 1;
-  height: 30px;
-  max-width: 34px;
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
-  background: var(--sun);
+.bunting-pennant { fill: var(--sun); }
+.bunting-pennant:nth-child(4n + 2) { fill: var(--rule); }
+.bunting-pennant:nth-child(4n + 3) { fill: var(--moss); }
+.bunting-pennant:nth-child(4n + 4) { fill: var(--sky); }
+.bunting-flag {
+  transform-box: fill-box;
   transform-origin: top center;
   animation: sway 3.2s ease-in-out infinite;
   animation-delay: calc(var(--i) * -0.27s);
 }
-.bunting i:nth-child(4n + 2) { background: var(--rule); }
-.bunting i:nth-child(4n + 3) { background: var(--moss); }
-.bunting i:nth-child(4n + 4) { background: var(--sky); }
 @keyframes sway {
   0%, 100% { transform: rotate(-4deg); }
   50% { transform: rotate(4deg); }
@@ -601,7 +598,7 @@ input[type='range']::-moz-range-thumb {
 .landing-contact :is(summary, a):focus-visible { outline: 2px solid var(--moss); outline-offset: 3px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .bunting i, .marquee-track, .glyph,
+  .bunting-flag, .marquee-track, .glyph,
   .festoon-lamp, .firework-rays { animation: none; }
 }
 
@@ -1040,12 +1037,10 @@ input[type='range']::-moz-range-thumb {
   .scroll-page { overflow: visible; }
   .specimen-page { padding: 28px 16px 56px; }
   .coverage-row { grid-template-columns: 1fr; gap: 4px; }
-  .fest-hero { padding: 36px 18px 28px; }
+  .fest-hero { padding: 90px 18px 28px; }
   .festival-firework { width: 38px; }
   .festival-firework-0 { left: 5px; top: 8px; }
   .festival-firework-1 { right: 5px; top: 8px; }
-  .bunting { margin-bottom: 24px; gap: 4px; }
-  .bunting i { height: 22px; }
   .fest-hero .lede { font-size: 17px; }
   .marquee-set span { font-size: 21px; padding: 0 14px; }
   .marquee-set span + span::before { margin-right: 28px; }

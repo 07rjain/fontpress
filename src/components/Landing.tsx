@@ -23,15 +23,29 @@ const FACES = ['serif', 'hand', 'poster', 'sans', 'mono', 'italic'] as const;
 const PENNANTS = 22;
 const HEADLINERS = 3;
 
+// Both decorations hang from the same quadratic curve.
+const wireY = (t: number) => 6 + 228 * t * (1 - t);
+
 function FestivalLights() {
   return (
     <div className="festival-lights" aria-hidden="true">
-      <svg className="festoon" viewBox="0 0 1160 100" fill="none" focusable="false">
+      <svg className="festoon" viewBox="0 0 1160 110" fill="none" focusable="false">
+        <g className="bunting">
+          {Array.from({ length: PENNANTS }, (_, i) => {
+            const t = (i + 0.5) / PENNANTS;
+            const angle = Math.atan(228 * (1 - 2 * t) / 1160) * 180 / Math.PI;
+            return (
+              <g key={i} className="bunting-pennant" transform={`translate(${t * 1160} ${wireY(t)}) rotate(${angle})`}>
+                <path className="bunting-flag" d="M-17 0H17L0 30Z" style={{ '--i': i } as React.CSSProperties} />
+              </g>
+            );
+          })}
+        </g>
         <path className="festoon-wire" d="M0 6 Q580 120 1160 6" />
-        {Array.from({ length: 20 }, (_, i) => {
-          const t = (i + 0.5) / 20;
+        {Array.from({ length: PENNANTS - 1 }, (_, i) => {
+          const t = (i + 1) / PENNANTS;
           const x = t * 1160;
-          const y = 6 + 228 * t * (1 - t);
+          const y = wireY(t);
           return (
             <g key={i} className="festoon-lamp" style={{ '--i': i } as React.CSSProperties}>
               <path className="festoon-drop" d={`M${x} ${y}v8`} />
@@ -125,11 +139,6 @@ export function Landing({
     <div className="landing festival">
       <section className="fest-hero">
         <FestivalLights />
-        <div className="bunting" aria-hidden="true">
-          {Array.from({ length: PENNANTS }, (_, i) => (
-            <i key={i} style={{ '--i': i } as React.CSSProperties} />
-          ))}
-        </div>
         <p className="fest-eyebrow">
           <span>A festival of handwriting</span>
           <span>Made with Handpress</span>
