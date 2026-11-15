@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n web,api -c green,blue \"vite\" \"tsx watch server/index.ts\"",
-    "build": "tsc --noEmit && vite build && tsx scripts/prerender.tsx",
+    "build": "tsc --noEmit && tsx scripts/check-api-runtime.ts && vite build && tsx scripts/prerender.tsx",
     "preview": "vite preview",
     "check": "tsx scripts/check.ts",
     "dev:web": "vite",
@@ -16,7 +16,8 @@
     "check:api": "tsx scripts/check-api.ts",
     "check:seo": "tsx scripts/check-seo.ts",
     "generate:seo-assets": "tsx scripts/generate-seo-assets.ts",
-    "check:supabase-db": "tsx scripts/check-supabase-db.ts"
+    "check:supabase-db": "tsx scripts/check-supabase-db.ts",
+    "check:api-runtime": "tsx scripts/check-api-runtime.ts"
   },
   "dependencies": {
     "@clerk/backend": "^3.25.0",

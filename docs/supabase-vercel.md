@@ -24,7 +24,7 @@ Set these in **Project → Settings → Environment Variables**, for Production 
 
 Keep the Supabase secret server-only. The frontend receives only temporary URLs for individual upload objects. `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_JWKS_URL` can remain in Vercel, but this integration does not use them: Clerk sessions are verified against Clerk, not Supabase Auth. Do not replace the Clerk keys or enable a Supabase sign-in flow for this setup.
 
-Use Vercel's **Vite** framework preset, build command `npm run build`, and output directory `dist`. The committed `api/[...path].ts` deploys the API as a Node function, with a 60-second maximum duration. `vercel.json` retains clean public-page URLs. Use a supported Node version from `package.json` (22 or 24 recommended).
+Use Vercel's **Vite** framework preset, build command `npm run build`, and output directory `dist`. The committed `api/index.ts` deploys the API as a Node function, with a 60-second maximum duration. `vercel.json` explicitly rewrites every `/api/*` path to that function and retains clean public-page URLs. The build checks the compiled API with native Node ESM, catching import errors that a TypeScript development loader would hide. Use a supported Node version from `package.json` (22 or 24 recommended).
 
 Redeploy after adding or changing variables. Vercel environment values are not automatically copied into your local `.env`. To test Supabase locally, set `SUPABASE_URL` and `SUPABASE_SECRET_KEY` in your local `.env` too; otherwise local development continues to use SQLite. A Vercel function with missing cloud configuration fails instead of writing a temporary SQLite database.
 

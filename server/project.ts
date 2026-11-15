@@ -1,6 +1,6 @@
-import { normalizeProject } from '../src/project';
-import { CHARSET, glyphPixelSize } from '../src/spec';
-import type { Project } from '../src/types';
+import { normalizeProject } from '../src/project.js';
+import { CHARSET, glyphPixelSize } from '../src/spec.js';
+import type { Project } from '../src/types.js';
 
 /** Accept only bounded PNG drawings; source is never included in public metadata. */
 export function readProjectUpload(value: unknown): Project | null {

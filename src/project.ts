@@ -1,5 +1,5 @@
-import { CHARSET, DEFAULT_SAMPLE } from './spec';
-import type { Glyph, Project } from './types';
+import { CHARSET, DEFAULT_SAMPLE } from './spec.js';
+import type { Glyph, Project } from './types.js';
 
 export function emptyGlyph(): Glyph {
   return { image: null, rev: 0, offsetX: 0 };

@@ -27,7 +27,7 @@ beforeAll(async () => {
     if (target.pathname.startsWith('/storage/v1/object/upload/sign/')) return Response.json({ url: `${target.pathname.replace('/storage/v1', '')}?token=object-token` });
     throw new Error(`Unexpected request: ${target.pathname}`);
   }));
-  const { default: handler } = await import('../api/[...path]');
+  const { default: handler } = await import('../api/index');
   server = createServer(handler);
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address(); if (!address || typeof address === 'string') throw new Error('No test address');

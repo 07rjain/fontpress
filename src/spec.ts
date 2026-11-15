@@ -1,4 +1,4 @@
-import type { Point, Rect } from './types';
+import type { Point, Rect } from './types.js';
 
 export const PAGE = { w: 8.5, h: 11 };
 export const GRID = { x: 4.5, y: 5.6, w: 91, h: 91 };

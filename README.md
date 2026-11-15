@@ -49,7 +49,7 @@ The build prerenders the homepage, `/handwriting-template`, `/install-font`, and
 
 Each public page gets its own title, description, canonical, social preview metadata and factual JSON-LD. The sitemap lists the homepage and two guides. The dynamic gallery remains `noindex,follow` and outside the sitemap until its production API and public font content are verified; then change its `index` flag in `src/seo.ts`. Robots rules allow public crawling and exclude API paths, and do not replace authentication. Unknown Node-server page URLs return a real 404.
 
-`vercel.json` enables clean URLs for the generated HTML pages. `api/[...path].ts` deploys the API on Vercel, using Supabase Postgres and a private Storage bucket rather than local SQLite. Run the [Supabase migration and environment setup](docs/supabase-vercel.md) before deploying.
+`vercel.json` enables clean URLs for the generated HTML pages. `api/index.ts` deploys the API on Vercel, using Supabase Postgres and a private Storage bucket rather than local SQLite. Run the [Supabase migration and environment setup](docs/supabase-vercel.md) before deploying.
 
 `npm run check:seo` checks built HTML without executing its JavaScript, page metadata and JSON-LD, sitemap inclusion, internal links, image files, production Node page responses, redirects and unknown-page 404s. Run it after `npm run build`. The public-site tests also check hydration without authentication, hash navigation and gallery failure states.
 

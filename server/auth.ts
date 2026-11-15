@@ -1,4 +1,4 @@
-import './env';
+import './env.js';
 import { createClerkClient, verifyToken } from '@clerk/backend';
 
 const secretKey = process.env.CLERK_SECRET_KEY;

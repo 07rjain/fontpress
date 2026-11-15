@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { Hono } from 'hono';
 import { serveStatic } from '@hono/node-server/serve-static';
-import { PUBLIC_PAGES } from '../src/seo';
+import { PUBLIC_PAGES } from '../src/seo.js';
 
 export const website = new Hono();
 if (existsSync('dist/index.html')) {

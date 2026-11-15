@@ -1,5 +1,5 @@
 import opentype from 'opentype.js';
-import { CHARSET } from '../src/spec';
+import { CHARSET } from '../src/spec.js';
 
 const SIGNATURES = new Set([0x00010000, 0x74727565, 0x4f54544f]);
 

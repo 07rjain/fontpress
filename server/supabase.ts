@@ -1,7 +1,7 @@
 import { PostgrestClient } from '@supabase/postgrest-js';
 import { StorageClient } from '@supabase/storage-js';
 import { randomUUID } from 'node:crypto';
-import type { FontRow, Visibility } from './db';
+import type { FontRow, Visibility } from './db.js';
 
 export class StorageError extends Error {
   constructor(message: string, readonly status: 400 | 404 | 409 | 429 | 503 = 503) { super(message); }

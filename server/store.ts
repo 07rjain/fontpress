@@ -1,15 +1,15 @@
-import './env';
-import type { fonts as sqliteFonts, FontRow, Visibility } from './db';
-export type { FontRow, Visibility } from './db';
+import './env.js';
+import type { fonts as sqliteFonts, FontRow, Visibility } from './db.js';
+export type { FontRow, Visibility } from './db.js';
 
 async function createStore() {
   if (process.env.SUPABASE_URL) {
-    const { SupabaseStore } = await import('./supabase');
+    const { SupabaseStore } = await import('./supabase.js');
     return new SupabaseStore();
   }
   // Never create a temporary SQLite database on a deployed function.
   if (process.env.VERCEL) throw new Error('Supabase is not configured.');
-  const local = await import('./db');
+  const local = await import('./db.js');
   return {
     ...local.fonts,
     content: async (id: string) => {

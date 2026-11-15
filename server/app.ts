@@ -1,14 +1,14 @@
-import { userIdFrom, displayName } from './auth';
+import { userIdFrom, displayName } from './auth.js';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { randomUUID } from 'node:crypto';
-import { fonts, getStore, cloudStore, type FontRow, type Visibility } from './store';
-import { StorageError } from './supabase';
-import { inspectFont } from './inspect';
-import { CHARSET, fontFileName } from '../src/spec';
-import { readProjectUpload } from './project';
-import { fontFormat } from '../src/fontFormat';
-import { website } from './website';
+import { fonts, getStore, cloudStore, type FontRow, type Visibility } from './store.js';
+import { StorageError } from './supabase.js';
+import { inspectFont } from './inspect.js';
+import { CHARSET, fontFileName } from '../src/spec.js';
+import { readProjectUpload } from './project.js';
+import { fontFormat } from '../src/fontFormat.js';
+import { website } from './website.js';
 
 const MAX_FONT_BYTES = 4 * 1024 * 1024;
 const MAX_FONTS_PER_USER = 50;
