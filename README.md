@@ -37,10 +37,25 @@ Set the production Clerk publishable key before building. Set `APP_ORIGINS` to t
 
 ```sh
 npm run build
+npm run check:seo
 npm start
 ```
 
 The Node server serves `dist/` and `/api` together on `PORT` (8787 by default). `npm run preview` previews only the static Vite build; it does not run or proxy the API. Serve production traffic through HTTPS using your hosting platform or reverse proxy. A persistent Node process and writable persistent disk are required.
+
+### Public pages and search
+
+The build prerenders the homepage, `/handwriting-template`, `/install-font`, and `/gallery` into HTML. The homepage and guides are readable without JavaScript or Clerk. The studio remains at the existing hash URLs and loads Clerk only when opened. Public pages use canonical URLs under `https://fontpress.subdomain.wtf`; change `SITE_URL` in `src/seo.ts` if the production domain changes.
+
+Each public page gets its own title, description, canonical, social preview metadata and factual JSON-LD. The sitemap lists the homepage and two guides. The dynamic gallery remains `noindex,follow` and outside the sitemap until its production API and public font content are verified; then change its `index` flag in `src/seo.ts`. Robots rules allow public crawling and exclude API paths, and do not replace authentication. Unknown Node-server page URLs return a real 404.
+
+`vercel.json` enables clean URLs for the generated HTML pages. This serves public content on Vercel; it does not deploy the stateful Node/SQLite API. The API still needs the persistent runtime described above and correct `/api` routing.
+
+`npm run check:seo` checks built HTML without executing its JavaScript, page metadata and JSON-LD, sitemap inclusion, internal links, image files, production Node page responses, redirects and unknown-page 404s. Run it after `npm run build`. The public-site tests also check hydration without authentication, hash navigation and gallery failure states.
+
+The example images are generated from three authored pen-stroke characters using the real Handpress tracing/export pipeline and are labelled as an illustrative sample. They are not a customer submission or a downloadable complete font. Regenerate them and the social preview with `npm run generate:seo-assets`; generated assets are committed under `public/`.
+
+After deployment, verify the actual domain, social image, API routing and public pages, then use Search Console URL Inspection to confirm indexing and canonical selection. Mobile rendering, real account flows, field Core Web Vitals and AI-search citations still need live verification; metadata or structured data alone does not guarantee visibility.
 
 `DATA_DIR` contains `handpress.db` and SQLite WAL files. New font bytes and source projects are written together in SQLite. The `fonts/` subdirectory is retained for entries created by earlier versions. Startup adds the new nullable columns to older databases without deleting existing data. Back up the whole data directory before upgrading; take a consistent SQLite backup or stop the process while copying it, including any WAL files. This storage setup is intended for one application instance, rather than multiple replicas with separate disks.
 

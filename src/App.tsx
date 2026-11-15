@@ -38,6 +38,7 @@ import {
 import { emptyProject, normalizeProject, loadProject, saveProject, listDrafts, loadDraft, type LocalDraft } from './storage';
 import type { Glyph, Project, Tool } from './types';
 import { useTaskScope } from './useTaskScope';
+import { PUBLIC_PAGES } from './seo';
 
 const Aligner = lazy(() => import('./components/Aligner').then((m) => ({ default: m.Aligner })));
 const Gallery = lazy(() => import('./components/Gallery').then((m) => ({ default: m.Gallery })));
@@ -52,7 +53,7 @@ type Mode = 'home' | 'draw' | 'specimen' | 'template' | 'align' | 'library' | 'g
 
 const MEMBER_TABS: { id: Mode; label: string }[] = [
   { id: 'draw', label: 'Draw' },
-  { id: 'specimen', label: 'Specimen' },
+  { id: 'specimen', label: 'Preview' },
   { id: 'template', label: 'Template' },
   { id: 'library', label: 'My fonts' },
   { id: 'gallery', label: 'Gallery' },
@@ -131,6 +132,7 @@ function Studio() {
     const url = urlFor(next);
     if (`${window.location.pathname}${window.location.search}${window.location.hash}` !== url) {
       window.history.pushState(null, '', url);
+      window.dispatchEvent(new PopStateEvent('popstate'));
     }
   }, []);
 
@@ -241,8 +243,8 @@ function Studio() {
 
   useEffect(() => {
     const family = project.familyName.trim();
-    document.title = family ? `${family} — Handpress` : 'Handpress — Make a font from your handwriting';
-  }, [project.familyName]);
+    document.title = mode === 'home' ? PUBLIC_PAGES['/'].title : family ? `${family} — Handpress` : 'Your font studio — Handpress';
+  }, [project.familyName, mode]);
 
   useEffect(() => {
     window.scrollTo(0, 0);

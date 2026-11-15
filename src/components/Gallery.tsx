@@ -58,7 +58,7 @@ export function Gallery({ onDownload, onStart }: Props) {
       </div>}
       {!loading && !error && result?.fonts.length === 0 && <div className="empty">
         <h2>{query ? 'No matching fonts' : 'No public fonts yet'}</h2>
-        <p>{query ? 'Try another font name or designer.' : 'Be the first. Draw your alphabet, then publish it from the Specimen page.'}</p>
+        <p>{query ? 'Try another font name or designer.' : 'Be the first. Draw your alphabet, then publish it from the Preview page.'}</p>
       </div>}
       {!loading && !error && result && result.fonts.length > 0 && <>
         <p className="meta" role="status">{result.total} font{result.total === 1 ? '' : 's'}{query ? ` matching “${query}”` : ''}</p>

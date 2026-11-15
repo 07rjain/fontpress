@@ -62,9 +62,9 @@ export function Library({ fonts, error, currentId, currentDraftId, drafts, onRes
       {!error && fonts?.length === 0 && (
         <div className="empty">
           <h2>Nothing saved yet</h2>
-          <p>Draw your letters, then open the Specimen page and save the font privately or publish it.</p>
+          <p>Draw your letters, then open the Preview page and save the font privately or publish it.</p>
           <button type="button" className="primary" onClick={onOpenSpecimen}>
-            Go to the specimen
+            Go to Preview
           </button>
         </div>
       )}

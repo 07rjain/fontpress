@@ -5,14 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n web,api -c green,blue \"vite\" \"tsx watch server/index.ts\"",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && tsx scripts/prerender.tsx",
     "preview": "vite preview",
     "check": "tsx scripts/check.ts",
     "dev:web": "vite",
     "dev:api": "tsx watch server/index.ts",
     "start": "tsx server/index.ts",
     "test": "vitest run",
-    "check:auth": "tsx scripts/check-auth.ts"
+    "check:auth": "tsx scripts/check-auth.ts",
+    "check:seo": "tsx scripts/check-seo.ts",
+    "generate:seo-assets": "tsx scripts/generate-seo-assets.ts"
   },
   "dependencies": {
     "@clerk/backend": "^3.25.0",
@@ -32,6 +34,7 @@
     "@napi-rs/canvas": "^1.1.0",
     "@testing-library/react": "^16.3.3",
     "@types/better-sqlite3": "^9.6.0",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^20.19.43",
     "@types/opentype.js": "^1.3.8",
     "@types/react": "^19.1.12",

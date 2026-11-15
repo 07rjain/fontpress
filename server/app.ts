@@ -1,14 +1,13 @@
 import { userIdFrom, displayName } from './auth';
-import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
 import { fonts, readFontFile, removeFontFile, type FontRow, type Visibility } from './db';
 import { inspectFont } from './inspect';
 import { CHARSET, fontFileName } from '../src/spec';
 import { readProjectUpload } from './project';
 import { fontFormat } from '../src/fontFormat';
+import { website } from './website';
 
 const MAX_FONT_BYTES = 4 * 1024 * 1024;
 const MAX_FONTS_PER_USER = 50;
@@ -214,7 +213,4 @@ app.get('/api/fonts/:id/file', async (c) => {
 
 app.all('/api/*', (c) => c.json({ error: 'Not found.' }, 404));
 
-if (existsSync('dist/index.html')) {
-  app.use('/*', serveStatic({ root: './dist' }));
-  app.get('*', serveStatic({ path: './dist/index.html' }));
-}
+app.route('/', website);

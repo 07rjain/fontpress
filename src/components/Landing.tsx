@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { fetchFontFile, listPublicFonts, type SavedFont } from '../api';
 import { CHARSET } from '../spec';
 import { FontCard, relativeTime } from './FontCard';
+import { ActionLink } from './ActionLink';
+import { FontExample } from './FontExample';
+import { FontFaq } from './FontFaq';
 
 type Props = {
   signedIn: boolean;
@@ -69,20 +72,20 @@ const STAGES = [
   {
     stage: 'Stage one',
     venue: 'The drawing tent',
-    title: 'Make the letters',
+    title: 'Write your characters',
     copy: 'Draw each character on the board with a mouse, trackpad, or pen. Or print the two-page template, fill it in with a black pen, and photograph it.',
   },
   {
     stage: 'Stage two',
     venue: 'The tracing hall',
-    title: 'Watch it become type',
-    copy: 'Every letter is traced into smooth outlines and sat on a shared baseline. The specimen page sets your own sentences in the font as it grows.',
+    title: 'Preview your handwriting',
+    copy: 'Type a sentence to see your font take shape. Adjust your letters and spacing as you go. Each drawing is traced into a font outline in your browser.',
   },
   {
     stage: 'Stage three',
     venue: 'The print shop',
-    title: 'Download, keep, or share',
-    copy: 'Download a .otf to install on your computer. Save it to your account privately, or publish it to the gallery so anyone can use it.',
+    title: 'Download your finished font',
+    copy: 'Complete all 85 characters and download an OpenType (.otf) file. Save your progress privately, or choose to publish your finished font to the gallery.',
   },
 ];
 
@@ -101,12 +104,13 @@ export function Landing({
   const started = filled > 0;
   const title = familyName.trim() || 'My Hand';
   const [headliners, setHeadliners] = useState<SavedFont[] | null>(null);
+  const [galleryError, setGalleryError] = useState(false);
 
   useEffect(() => {
     let alive = true;
     listPublicFonts().then(
       (list) => alive && setHeadliners(list.slice(0, HEADLINERS)),
-      () => alive && setHeadliners([]),
+      () => { if (alive) { setGalleryError(true); setHeadliners([]); } },
     );
     return () => {
       alive = false;
@@ -114,10 +118,8 @@ export function Landing({
   }, []);
 
   const startLabel = started
-    ? `Continue · ${filled} of ${CHARSET.length} letters`
-    : signedIn
-      ? 'Start drawing'
-      : 'Get started free';
+    ? `Continue my font · ${filled} of ${CHARSET.length} characters`
+    : 'Create my font';
 
   return (
     <div className="landing festival">
@@ -129,32 +131,32 @@ export function Landing({
           ))}
         </div>
         <p className="fest-eyebrow">
-          <span>Handpress presents</span>
-          <span>Open all year</span>
-          <span>Free entry</span>
+          <span>A festival of handwriting</span>
+          <span>Made with Handpress</span>
+          <span>Free to use</span>
         </p>
         <h1 className="fest-title">
-          <span className="face-serif">A</span> <span className="face-poster">festival</span>{' '}
-          <span className="face-italic">of</span> <span className="face-hand">handwriting</span>
+          <span className="face-serif">Turn your</span>{' '}<span className="face-hand">handwriting</span>{' '}<span className="face-italic">into a</span>{' '}<span className="face-poster">font.</span>
         </h1>
         <p className="lede">
-          Every hand is a typeface. Write the alphabet once and Handpress traces every letter into a real font you
-          can install, type with, and put on the main stage for everyone to download.
+          Draw letters, numbers and punctuation, or upload photos of our completed handwriting template.
+          Preview your words, then finish all {CHARSET.length} characters to download your font.
         </p>
         <div className="hero-actions">
-          <button type="button" className="primary big" onClick={onDraw}>
+          <ActionLink href="/#/draw" className="primary big" onClick={onDraw}>
             {startLabel}
-          </button>
+          </ActionLink>
           {started ? (
-            <button type="button" className="ghost big" onClick={onSpecimen}>
-              See the specimen
-            </button>
+            <ActionLink href="/#/specimen" className="ghost big" onClick={onSpecimen}>
+              Preview my font
+            </ActionLink>
           ) : (
-            <button type="button" className="ghost big" onClick={onGallery}>
-              See who's playing
-            </button>
+            <ActionLink href="/gallery" className="ghost big" onClick={onGallery}>
+              Browse handwriting fonts
+            </ActionLink>
           )}
         </div>
+        <p className="hero-requirements">Free account required. Complete all {CHARSET.length} characters to download. Save your progress as you go.</p>
         <ul className="wristbands" aria-label="What you get">
           <li>{CHARSET.length} characters</li>
           <li>.otf you can install</li>
@@ -206,10 +208,12 @@ export function Landing({
         </ul>
       </section>
 
-      <section className="fest-lineup">
+      <FontExample />
+
+      <section id="how-it-works" className="fest-lineup">
         <header className="fest-head">
           <p className="eyebrow">The programme</p>
-          <h2>Three stages, no font software.</h2>
+          <h2>How to create your handwriting font</h2>
         </header>
         <ol className="lineup">
           {STAGES.map((item, index) => (
@@ -225,27 +229,27 @@ export function Landing({
                 <div className="how-links">
                   {index === 0 && (
                     <>
-                      <button type="button" className="text-btn" onClick={onDraw}>
+                      <ActionLink href="/#/draw" className="text-btn" onClick={onDraw}>
                         Open the board
-                      </button>
-                      <button type="button" className="text-btn" onClick={onTemplate}>
+                      </ActionLink>
+                      <ActionLink href="/#/template" className="text-btn" onClick={onTemplate}>
                         Print the template
-                      </button>
+                      </ActionLink>
                     </>
                   )}
                   {index === 1 && (
-                    <button type="button" className="text-btn" onClick={onUpload}>
+                    <ActionLink href="/#/template" className="text-btn" onClick={onUpload}>
                       Upload a photographed page
-                    </button>
+                    </ActionLink>
                   )}
                   {index === 2 && (
                     <>
-                      <button type="button" className="text-btn" onClick={onSpecimen}>
-                        Go to the specimen
-                      </button>
-                      <button type="button" className="text-btn" onClick={onGallery}>
-                        See the gallery
-                      </button>
+                      <ActionLink href="/#/specimen" className="text-btn" onClick={onSpecimen}>
+                        Preview your font
+                      </ActionLink>
+                      <ActionLink href="/gallery" className="text-btn" onClick={onGallery}>
+                        Browse handwriting fonts
+                      </ActionLink>
                     </>
                   )}
                 </div>
@@ -261,18 +265,19 @@ export function Landing({
             <p className="eyebrow">On the main stage</p>
             <h2>Fonts people have published</h2>
           </div>
-          <button type="button" className="ghost" onClick={onGallery}>
-            Full lineup
-          </button>
+          <ActionLink href="/gallery" className="ghost" onClick={onGallery}>
+            Browse handwriting fonts
+          </ActionLink>
         </header>
-        {headliners === null && <p className="meta">Warming up the stage…</p>}
-        {headliners?.length === 0 && (
+        {headliners === null && <p className="meta" role="status">Loading community fonts…</p>}
+        {galleryError && <p className="gallery-unavailable" role="status">Community fonts are temporarily unavailable. You can still draw and preview your font in the studio. Account saves and publishing need a connection to Handpress.</p>}
+        {!galleryError && headliners?.length === 0 && (
           <div className="empty">
-            <h2>The stage is empty</h2>
-            <p>Be the opening act. Draw your alphabet, then publish it from the Specimen page.</p>
-            <button type="button" className="primary" onClick={onDraw}>
-              {signedIn ? 'Start drawing' : 'Get started free'}
-            </button>
+            <h2>No public fonts yet</h2>
+            <p>Create your characters, then publish your completed font from Preview.</p>
+            <ActionLink href="/#/draw" className="primary" onClick={onDraw}>
+              {signedIn ? 'Continue in the studio' : 'Create my font'}
+            </ActionLink>
           </div>
         )}
         {headliners && headliners.length > 0 && (
@@ -294,6 +299,8 @@ export function Landing({
         )}
       </section>
 
+      <FontFaq />
+
       <section className="fest-ticket">
         <div className="ticket">
           <div className="ticket-stub">
@@ -302,14 +309,14 @@ export function Landing({
           </div>
           <div className="ticket-body">
             <p className="eyebrow">Your ticket</p>
-            <h2>Put your own hand on the bill.</h2>
+            <h2>Make something only your handwriting could make.</h2>
             <p className="lede">
-              Your drawings stay on this device. A font is only uploaded when you save it, and it stays private unless
-              you publish it.
+              Handpress is a free online handwriting font generator. Drawings are traced in your browser.
+              Saving uploads your font and editable drawings to your account; they stay private unless you publish the font.
             </p>
-            <button type="button" className="primary big" onClick={onDraw}>
+            <ActionLink href="/#/draw" className="primary big" onClick={onDraw}>
               {startLabel}
-            </button>
+            </ActionLink>
           </div>
         </div>
       </section>

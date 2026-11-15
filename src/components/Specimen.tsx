@@ -60,7 +60,7 @@ export function Specimen({
     <div className="specimen-page">
       <header className="spec-hero">
         <p className="eyebrow">
-          Specimen
+          Preview
           {updating ? ' · setting type' : ''}
         </p>
         <h1 className="font-title" aria-label={title}>
@@ -151,8 +151,7 @@ export function Specimen({
               </p>
             )}
             <p className="install">
-              Open the file with Font Book on a Mac, or double-click it on Windows. The font then shows up in any
-              app.
+              Open the file with Font Book on a Mac, or double-click it on Windows. The font becomes available in apps that support installed fonts. You may need to reopen the app.
             </p>
           </div>
 
