@@ -16,6 +16,7 @@ export type FontRow = {
   created_at: number;
   updated_at: number;
   editable: number;
+  version?: string;
 };
 
 const DATA_DIR = path.resolve(process.env.DATA_DIR ?? 'data');

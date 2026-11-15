@@ -41,7 +41,7 @@ npm run check:seo
 npm start
 ```
 
-The Node server serves `dist/` and `/api` together on `PORT` (8787 by default). `npm run preview` previews only the static Vite build; it does not run or proxy the API. Serve production traffic through HTTPS using your hosting platform or reverse proxy. A persistent Node process and writable persistent disk are required.
+The Node server serves `dist/` and `/api` together on `PORT` (8787 by default). `npm run preview` previews only the static Vite build; it does not run or proxy the API. Serve production traffic through HTTPS using your hosting platform or reverse proxy. For this standalone SQLite mode, a persistent Node process and writable persistent disk are required. Vercel deployments use Supabase instead; see [the setup steps](docs/supabase-vercel.md).
 
 ### Public pages and search
 
@@ -49,7 +49,7 @@ The build prerenders the homepage, `/handwriting-template`, `/install-font`, and
 
 Each public page gets its own title, description, canonical, social preview metadata and factual JSON-LD. The sitemap lists the homepage and two guides. The dynamic gallery remains `noindex,follow` and outside the sitemap until its production API and public font content are verified; then change its `index` flag in `src/seo.ts`. Robots rules allow public crawling and exclude API paths, and do not replace authentication. Unknown Node-server page URLs return a real 404.
 
-`vercel.json` enables clean URLs for the generated HTML pages. This serves public content on Vercel; it does not deploy the stateful Node/SQLite API. The API still needs the persistent runtime described above and correct `/api` routing.
+`vercel.json` enables clean URLs for the generated HTML pages. `api/[...path].ts` deploys the API on Vercel, using Supabase Postgres and a private Storage bucket rather than local SQLite. Run the [Supabase migration and environment setup](docs/supabase-vercel.md) before deploying.
 
 `npm run check:seo` checks built HTML without executing its JavaScript, page metadata and JSON-LD, sitemap inclusion, internal links, image files, production Node page responses, redirects and unknown-page 404s. Run it after `npm run build`. The public-site tests also check hydration without authentication, hash navigation and gallery failure states.
 
@@ -57,9 +57,11 @@ The example images are generated from three authored pen-stroke characters using
 
 After deployment, verify the actual domain, social image, API routing and public pages, then use Search Console URL Inspection to confirm indexing and canonical selection. Mobile rendering, real account flows, field Core Web Vitals and AI-search citations still need live verification; metadata or structured data alone does not guarantee visibility.
 
+Run `npm run check:api -- --origin https://fontpress.vercel.app` against the deployed website (or replace the origin with your own). It requires JSON from health and public gallery endpoints, and a 401 from the private library without a session. It fails on hosting 404s and HTML fallbacks without creating accounts or changing saved fonts. A successful static build or `check:seo` does not establish that these API routes are deployed. If the check finds missing routes, deploy the committed Vercel API function and verify its Supabase configuration; do not use a temporary serverless filesystem for SQLite.
+
 `DATA_DIR` contains `handpress.db` and SQLite WAL files. New font bytes and source projects are written together in SQLite. The `fonts/` subdirectory is retained for entries created by earlier versions. Startup adds the new nullable columns to older databases without deleting existing data. Back up the whole data directory before upgrading; take a consistent SQLite backup or stop the process while copying it, including any WAL files. This storage setup is intended for one application instance, rather than multiple replicas with separate disks.
 
-The API limits each account to 50 saved fonts. Compiled uploads are limited to 4 MiB; editable project JSON to 12 MiB; each glyph drawing to 512 KiB; and the complete multipart request to 20 MiB.
+The API limits each account to 50 saved fonts. Compiled uploads are limited to 4 MiB; editable project JSON to 12 MiB; and each glyph drawing to 512 KiB. SQLite mode allows multipart requests up to 20 MiB. On Vercel, large files upload directly to private Supabase staging objects, and small completion requests validate and commit them. See [cloud limits and cleanup](docs/supabase-vercel.md#uploads-limits-and-cleanup).
 
 ## Verification
 
@@ -71,7 +73,7 @@ npm run build
 
 `check` covers geometry, contour orientation, template mark detection, raster cleanup, and basic font parsing. Vitest adds real-raster drawing and font-export checks, transparent artwork import, pointer cancellation and letter switching, delayed account and save responses, local draft recovery, cloud project round trips, upload validation, legacy database/file compatibility, account limits, and gallery search/pagination.
 
-Tests use temporary SQLite databases and in-memory IndexedDB. API integration tests simulate verified identities at the Clerk boundary; they do not call Clerk or verify real session signatures. Canvas checks use a native raster implementation under jsdom. They do not establish compatibility with every browser or operating-system font installer.
+Tests use temporary SQLite databases and in-memory IndexedDB. Cloud coverage checks direct uploads, owner-only drawings, expired/replayed uploads, failed replacements, and the Supabase SDK request shapes. `npm run check:supabase-db` additionally checks the actual migration and concurrent quotas in a disposable PostgreSQL cluster (requires PostgreSQL command-line tools). API integration tests simulate verified identities at the Clerk boundary; they do not call Clerk or verify real session signatures. Canvas checks use a native raster implementation under jsdom. They do not establish compatibility with every browser or operating-system font installer.
 
 Before a production release, also check real Clerk sign-in/sign-out and account switching, mouse/touch/stylus drawing, printing both template pages, importing photographs from a phone, and installation of a downloaded font on the operating systems you support.
 

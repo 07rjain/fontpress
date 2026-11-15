@@ -13,13 +13,17 @@
     "start": "tsx server/index.ts",
     "test": "vitest run",
     "check:auth": "tsx scripts/check-auth.ts",
+    "check:api": "tsx scripts/check-api.ts",
     "check:seo": "tsx scripts/check-seo.ts",
-    "generate:seo-assets": "tsx scripts/generate-seo-assets.ts"
+    "generate:seo-assets": "tsx scripts/generate-seo-assets.ts",
+    "check:supabase-db": "tsx scripts/check-supabase-db.ts"
   },
   "dependencies": {
     "@clerk/backend": "^3.25.0",
     "@clerk/react": "^6.17.8",
     "@hono/node-server": "^2.1.5",
+    "@supabase/postgrest-js": "^2.109.0",
+    "@supabase/storage-js": "^2.109.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.1.0",
     "better-sqlite3": "^12.11.1",
