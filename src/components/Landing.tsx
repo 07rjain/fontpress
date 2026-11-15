@@ -317,6 +317,14 @@ export function Landing({
       <footer className="landing-foot">
         <span>Handpress</span>
         <span>Letters are traced in your browser. Saved fonts live on Handpress.</span>
+        <details className="landing-contact">
+          <summary>Contact us <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="m3 5 4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></summary>
+          <nav aria-label="Contact us">
+            <a href="https://calendly.com/07rishabh/quick-call" target="_blank" rel="noreferrer">Book a call</a>
+            <a href="https://www.bothrarishabh.com/" target="_blank" rel="noreferrer">Website</a>
+            <a href="mailto:07rishabhjain@gmail.com">Email</a>
+          </nav>
+        </details>
       </footer>
     </div>
   );
