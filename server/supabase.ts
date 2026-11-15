@@ -4,7 +4,13 @@ import { randomUUID } from 'node:crypto';
 import type { FontRow, Visibility } from './db.js';
 
 export class StorageError extends Error {
-  constructor(message: string, readonly status: 400 | 404 | 409 | 429 | 503 = 503) { super(message); }
+  constructor(
+    message: string,
+    readonly status: 400 | 404 | 409 | 429 | 503 = 503,
+    readonly diagnostic: 'supabase_unavailable' | 'supabase_schema_missing' | 'supabase_credentials_invalid'
+      | 'supabase_permissions_missing' | 'supabase_storage_missing' | 'supabase_storage_configuration'
+      | 'supabase_configuration_missing' = 'supabase_unavailable',
+  ) { super(message); }
 }
 export type Upload = {
   id: string; font_id: string; owner_id: string; expected_version: string | null;
@@ -16,14 +22,20 @@ const BUCKET = 'handpress';
 const metadata = 'id,owner_id,owner_name,name,designer,visibility,glyph_count,size,created_at,updated_at,editable,version';
 const stagePaths = (id: string) => [`staging/${id}/font`, `staging/${id}/project`];
 const savedPaths = (id: string) => [`saved/${id}/font`, `saved/${id}/project`];
-function check(error: { message: string } | null) {
+function check(error: { message: string; code?: unknown } | null) {
   if (!error) return;
   if (error.message.includes('FONT_NOT_FOUND')) throw new StorageError('Font not found.', 404);
   if (error.message.includes('FONT_LIMIT')) throw new StorageError('You can keep up to 50 fonts. Delete one to save another.', 409);
   if (error.message.includes('UPLOAD_RATE_LIMIT')) throw new StorageError('Too many saves. Please try again in an hour.', 429);
   if (error.message.includes('UPLOAD_PENDING_LIMIT')) throw new StorageError('Please wait for your other saves to finish, or try again in 15 minutes.', 429);
+  const code = typeof error.code === 'string' ? error.code : '';
+  let diagnostic: StorageError['diagnostic'] = 'supabase_unavailable';
+  if (['PGRST202', 'PGRST205', '42P01', '42883'].includes(code)) diagnostic = 'supabase_schema_missing';
+  else if (['PGRST301', 'PGRST302', 'PGRST303'].includes(code) || /invalid api key|invalid jwt|jwt expired/i.test(error.message)) diagnostic = 'supabase_credentials_invalid';
+  else if (code === '42501') diagnostic = 'supabase_permissions_missing';
+  else if (/bucket not found/i.test(error.message)) diagnostic = 'supabase_storage_missing';
   // Database and service responses may contain internal details. Never return them to browsers.
-  throw new StorageError('The font service is unavailable. Check the Supabase setup and try again.');
+  throw new StorageError('The font service is unavailable. Check the Supabase setup and try again.', 503, diagnostic);
 }
 
 export class SupabaseStore {
@@ -32,7 +44,7 @@ export class SupabaseStore {
   constructor() {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SECRET_KEY;
-    if (!url || !key) throw new StorageError('The font service has not been configured.');
+    if (!url || !key) throw new StorageError('The font service has not been configured.', 503, 'supabase_configuration_missing');
     const headers = { apikey: key, Authorization: `Bearer ${key}` };
     const boundedFetch: typeof fetch = (input, init) => fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(20_000) });
     this.db = new PostgrestClient(`${url.replace(/\/$/, '')}/rest/v1`, { headers, fetch: boundedFetch });
@@ -45,7 +57,7 @@ export class SupabaseStore {
       this.storage.getBucket(BUCKET), this.db.from('handpress_uploads').select('id').limit(1),
     ]);
     check(error); check(storageError); check(uploadsError);
-    if (!bucket || bucket.public || bucket.file_size_limit !== 12 * 1024 * 1024) throw new StorageError('The private font storage bucket needs setup.');
+    if (!bucket || bucket.public || bucket.file_size_limit !== 12 * 1024 * 1024) throw new StorageError('The private font storage bucket needs setup.', 503, 'supabase_storage_configuration');
   }
   async get(id: string): Promise<CloudRow | undefined> {
     const { data, error } = await this.db.from('handpress_fonts').select('*').eq('id', id).maybeSingle(); check(error);

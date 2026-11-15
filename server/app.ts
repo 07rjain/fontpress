@@ -92,7 +92,10 @@ const uploadLimit = bodyLimit({
 });
 
 app.onError((error, c) => {
-  if (error instanceof StorageError) return c.json({ error: error.message }, error.status);
+  c.header('Cache-Control', 'no-store');
+  if (error instanceof StorageError) return c.json({ error: error.message,
+    ...(c.req.path === '/api/health' ? { diagnostic: error.diagnostic } : {}),
+  }, error.status);
   console.error('Font service request failed:', error.name);
   return c.json({ error: 'The font service is temporarily unavailable. Please try again later.' }, 503);
 });

@@ -62,3 +62,17 @@ test('health requires a private bucket and installed schema; missing configurati
   vi.stubEnv('SUPABASE_SECRET_KEY', '');
   expect(() => new SupabaseStore()).toThrow('has not been configured');
 });
+
+test.each([
+  ['PGRST202', 'Function missing; internal details', 'supabase_schema_missing'],
+  ['PGRST205', 'Table missing; internal details', 'supabase_schema_missing'],
+  ['PGRST301', 'Invalid JWT; internal details', 'supabase_credentials_invalid'],
+  ['', 'Invalid API key; internal details', 'supabase_credentials_invalid'],
+  ['42501', 'Permission denied; internal details', 'supabase_permissions_missing'],
+  ['', 'Unclassified failure; internal details', 'supabase_unavailable'],
+])('Supabase error %s has a safe diagnostic without exposing its response', async (code, message, diagnostic) => {
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => Response.json({ code, message }, { status: 400 })));
+  await expect(new SupabaseStore().publicPage('', 1, 0)).rejects.toMatchObject({
+    status: 503, diagnostic, message: 'The font service is unavailable. Check the Supabase setup and try again.',
+  });
+});

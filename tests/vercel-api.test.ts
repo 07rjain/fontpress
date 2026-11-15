@@ -11,13 +11,16 @@ const unusedDataDir = join(tmpdir(), `handpress-must-not-use-sqlite-${randomUUID
 let server: Server;
 let origin: string;
 let bucketPublic = false;
+let databaseMissing = false;
 beforeAll(async () => {
   vi.stubEnv('VERCEL', '1'); vi.stubEnv('DATA_DIR', unusedDataDir);
   vi.stubEnv('SUPABASE_URL', 'https://project.supabase.co'); vi.stubEnv('SUPABASE_SECRET_KEY', 'test-server-secret');
   // Real Node HTTP -> deployed adapter -> real Hono routes -> real SDK -> stubbed Supabase transport.
   vi.stubGlobal('fetch', vi.fn<typeof fetch>(async (url, init) => {
     const target = new URL(String(url));
-    if (target.pathname === '/rest/v1/rpc/handpress_public_page') return Response.json({ fonts: [], total: 0 });
+    if (target.pathname === '/rest/v1/rpc/handpress_public_page') return databaseMissing
+      ? Response.json({ code: 'PGRST202', message: 'private internal response' }, { status: 404 })
+      : Response.json({ fonts: [], total: 0 });
     if (target.pathname === '/storage/v1/bucket/handpress') return Response.json({ public: bucketPublic, file_size_limit: 12582912 });
     if (target.pathname === '/rest/v1/handpress_uploads') return Response.json([]);
     if (target.pathname === '/rest/v1/rpc/handpress_reserve_upload') {
@@ -61,4 +64,18 @@ test('health reports setup failures instead of claiming that an unsafe public bu
   const response = await nativeFetch(`${origin}/api/health`);
   expect(response.status).toBe(503);
   expect((await response.json()).ok).toBeUndefined();
+});
+
+
+test('health identifies missing setup without exposing internal errors in the gallery', async () => {
+  bucketPublic = false; databaseMissing = true;
+  const response = await nativeFetch(`${origin}/api/health`);
+  expect(response.status).toBe(503);
+  expect(response.headers.get('Cache-Control')).toBe('no-store');
+  expect((await response.json()).diagnostic).toBe('supabase_schema_missing');
+  const gallery = await nativeFetch(`${origin}/api/fonts/public`);
+  expect(gallery.status).toBe(503);
+  const body = await gallery.json();
+  expect(body.diagnostic).toBeUndefined();
+  expect(JSON.stringify(body)).not.toContain('private internal response');
 });
