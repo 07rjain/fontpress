@@ -52,6 +52,7 @@ function FestivalLights() {
               <ellipse className="festoon-glow" cx={x} cy={y + 15} rx="19" ry="23" />
               <rect className="festoon-cap" x={x - 2.5} y={y + 7} width="5" height="4" rx="1" />
               <ellipse className="festoon-bulb" cx={x} cy={y + 15} rx="4" ry="6" />
+              <ellipse className="festoon-hit" cx={x} cy={y + 15} rx="15" ry="18" />
             </g>
           );
         })}

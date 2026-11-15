@@ -332,12 +332,32 @@ input[type='range']::-moz-range-thumb {
 .festoon-lamp { color: #d9a53a; }
 .festoon-lamp:nth-of-type(3n + 2) { color: #c4553a; }
 .festoon-lamp:nth-of-type(3n) { color: #84966a; }
-.festoon-glow { fill: currentColor; opacity: 0.1; }
+.festoon-glow {
+  fill: currentColor;
+  opacity: 0.1;
+  filter: blur(3px);
+  transition: opacity 180ms ease, filter 180ms ease;
+}
 .festoon-bulb {
   fill: #fff6d6;
   stroke: currentColor;
   stroke-width: 1.5;
   filter: drop-shadow(0 0 4px #edb94d);
+  transition: fill 180ms ease, stroke 180ms ease, filter 180ms ease;
+}
+.festoon-hit { fill: transparent; }
+@media (hover: hover) {
+  /* Only the bulbs receive pointer events; the decorative overlay stays transparent to clicks. */
+  .festoon-hit { pointer-events: all; }
+  .festoon-lamp:hover .festoon-glow {
+    opacity: 0.8;
+    filter: blur(5px);
+  }
+  .festoon-lamp:hover .festoon-bulb {
+    fill: #fffde8;
+    stroke: #fff1ae;
+    filter: drop-shadow(0 0 4px #fff3b0) drop-shadow(0 0 10px currentColor) drop-shadow(0 0 18px currentColor);
+  }
 }
 .festoon-lamp {
   animation: festival-welcome-glow 2s ease-in-out 2;
@@ -600,6 +620,7 @@ input[type='range']::-moz-range-thumb {
 @media (prefers-reduced-motion: reduce) {
   .bunting-flag, .marquee-track, .glyph,
   .festoon-lamp, .firework-rays { animation: none; }
+  .festoon-glow, .festoon-bulb { transition: none; }
 }
 
 /* ---------- draw ---------- */
