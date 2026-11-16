@@ -24,7 +24,7 @@ test('public content hydrates without authentication, exposes FAQ answers, and k
   const onRecoverableError = vi.fn();
   await act(async () => { hydrated = hydrateRoot(document.getElementById('test-root')!, <SiteRouter />, { onRecoverableError }); });
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Turn your handwriting into a font.');
-  expect(screen.getByText('Is Handpress free? Do I need an account?')).toBeTruthy();
+  expect(screen.getByText('Is Fontpress free? Do I need an account?')).toBeTruthy();
   expect(screen.queryByTestId('studio')).toBeNull();
   expect(document.title).toBe(PUBLIC_PAGES['/'].title);
   expect(onRecoverableError).not.toHaveBeenCalled();

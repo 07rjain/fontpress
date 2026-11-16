@@ -12,9 +12,9 @@ Use these values exactly as supplied by the production Clerk Domains page:
 | --- | --- | --- |
 | `accounts.fontpress.subdomain.wtf` | CNAME | `accounts.clerk.services` |
 | `clerk.fontpress.subdomain.wtf` | CNAME | `frontend-api.clerk.services` |
-| `clk._domainkey.fontpress.subdomain.wtf` | CNAME | `dkim1.gcka9ht2qxfd.clerk.services` |
-| `clk2._domainkey.fontpress.subdomain.wtf` | CNAME | `dkim2.gcka9ht2qxfd.clerk.services` |
-| `clkmail.fontpress.subdomain.wtf` | CNAME | `mail.gcka9ht2qxfd.clerk.services` |
+| `clk._domainkey.fontpress.subdomain.wtf` | CNAME | `dkim1.rg4uaxmb2u03.clerk.services` |
+| `clk2._domainkey.fontpress.subdomain.wtf` | CNAME | `dkim2.rg4uaxmb2u03.clerk.services` |
+| `clkmail.fontpress.subdomain.wtf` | CNAME | `mail.rg4uaxmb2u03.clerk.services` |
 
 In a DNS zone for **fontpress.subdomain.wtf**, the relative names are `accounts`, `clerk`, `clk._domainkey`, `clk2._domainkey`, and `clkmail`.
 

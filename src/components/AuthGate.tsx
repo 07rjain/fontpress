@@ -9,7 +9,7 @@ export function AuthGate({ onSignIn, onSignUp, onGallery }: Props) {
     <div className="gate">
       <div className="gate-card">
         <span className="brand-mark big" aria-hidden="true">
-          H
+          F
         </span>
         <h1>Sign in to make your font</h1>
         <p className="lede">

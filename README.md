@@ -1,6 +1,6 @@
-# Handpress
+# Fontpress
 
-Handpress turns handwriting into an installable OpenType font. Draw on the board, import an individual letter, or print and photograph the two-page handwriting template. Preview your writing, save an editable private draft, and complete all 85 characters before downloading or publishing your font.
+Fontpress turns handwriting into an installable OpenType font. Draw on the board, import an individual letter, or print and photograph the two-page handwriting template. Preview your writing, save an editable private draft, and complete all 85 characters before downloading or publishing your font.
 
 ## Run locally
 
@@ -53,7 +53,7 @@ Each public page gets its own title, description, canonical, social preview meta
 
 `npm run check:seo` checks built HTML without executing its JavaScript, page metadata and JSON-LD, sitemap inclusion, internal links, image files, production Node page responses, redirects and unknown-page 404s. Run it after `npm run build`. The public-site tests also check hydration without authentication, hash navigation and gallery failure states.
 
-The example images are generated from three authored pen-stroke characters using the real Handpress tracing/export pipeline and are labelled as an illustrative sample. They are not a customer submission or a downloadable complete font. Regenerate them and the social preview with `npm run generate:seo-assets`; generated assets are committed under `public/`.
+The example images are generated from three authored pen-stroke characters using the real Fontpress tracing/export pipeline and are labelled as an illustrative sample. They are not a customer submission or a downloadable complete font. Regenerate them and the social preview with `npm run generate:seo-assets`; generated assets are committed under `public/`.
 
 After deployment, verify the actual domain, social image, API routing and public pages, then use Search Console URL Inspection to confirm indexing and canonical selection. Mobile rendering, real account flows, field Core Web Vitals and AI-search citations still need live verification; metadata or structured data alone does not guarantee visibility.
 

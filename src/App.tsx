@@ -243,7 +243,7 @@ function Studio() {
 
   useEffect(() => {
     const family = project.familyName.trim();
-    document.title = mode === 'home' ? PUBLIC_PAGES['/'].title : family ? `${family} — Handpress` : 'Your font studio — Handpress';
+    document.title = mode === 'home' ? PUBLIC_PAGES['/'].title : family ? `${family} — Fontpress` : 'Your font studio — Fontpress';
   }, [project.familyName, mode]);
 
   useEffect(() => {
@@ -721,7 +721,7 @@ function Studio() {
   if (!ready) {
     return (
       <div className="boot">
-        <p>{loadError || 'Handpress'}</p>
+        <p>{loadError || 'Fontpress'}</p>
         {loadError && <button type="button" className="primary" onClick={() => setLoadAttempt((value) => value + 1)}>Retry loading drawings</button>}
       </div>
     );
@@ -737,11 +737,11 @@ function Studio() {
   return (
     <div className={scrolls ? 'app home' : 'app'}>
       <header className="topbar no-print">
-        <button type="button" className="brand" onClick={() => setMode('home')} aria-label="Handpress home">
+        <button type="button" className="brand" onClick={() => setMode('home')} aria-label="Fontpress home">
           <span className="brand-mark" aria-hidden="true">
-            H
+            F
           </span>
-          <span className="brand-name">Handpress</span>
+          <span className="brand-name">Fontpress</span>
         </button>
         <nav className="tabs" aria-label="Sections">
           {tabs.map((tab) => (

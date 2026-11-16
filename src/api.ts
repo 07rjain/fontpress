@@ -34,7 +34,7 @@ async function call(path: string, init: RequestInit, getToken?: TokenSource): Pr
   try {
     response = await fetch(path, { ...init, headers });
   } catch {
-    throw new ApiError('Could not reach the Handpress server.', 0);
+    throw new ApiError('Could not reach the Fontpress server.', 0);
   }
   if (!response.ok) {
     const body = await response.json().catch(() => null);

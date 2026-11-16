@@ -24,5 +24,5 @@ test('a Clerk script that never loads produces an actionable error instead of an
   expect(screen.getByRole('alert').textContent).toContain('We couldn’t connect to sign-in');
   expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
   expect(screen.queryByRole('application')).toBeNull();
-  expect(screen.queryByText('Handpress', { exact: true })).toBeNull();
+  expect(screen.queryByText('Fontpress', { exact: true })).toBeNull();
 });

@@ -44,7 +44,7 @@ function toPublic(row: FontRow) {
 function validateUpload(bytes: Uint8Array, body: Record<string, unknown>) {
   if (bytes.byteLength > MAX_FONT_BYTES) return { error: 'The font file is too large.' } as const;
   const inspected = inspectFont(bytes);
-  if (!inspected) return { error: 'That file is not a font Handpress can store.' } as const;
+  if (!inspected) return { error: 'That file is not a font Fontpress can store.' } as const;
   const visibility = cleanVisibility(body.visibility);
   if (!visibility) return { error: 'Choose private or public.' } as const;
   if (visibility === 'public' && inspected.missing.length > 0) {

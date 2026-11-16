@@ -16,14 +16,14 @@ for (const path of Object.keys(PUBLIC_PAGES) as PublicPath[]) {
     <meta name="robots" content="${page.index ? 'index,follow' : 'noindex,follow'}" />
     <link rel="canonical" href="${url}" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Handpress" />
+    <meta property="og:site_name" content="Fontpress" />
     <meta property="og:title" content="${escape(page.title)}" />
     <meta property="og:description" content="${escape(page.description)}" />
     <meta property="og:url" content="${url}" />
     <meta property="og:image" content="${SITE_URL}/social-card.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Handpress: Turn your handwriting into a font. Free online handwriting font generator." />
+    <meta property="og:image:alt" content="Fontpress: Turn your handwriting into a font. Free online handwriting font generator." />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escape(page.title)}" />
     <meta name="twitter:description" content="${escape(page.description)}" />

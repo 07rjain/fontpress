@@ -40,7 +40,7 @@ export function Gallery({ onDownload, onStart }: Props) {
         <div>
           <p className="eyebrow">Gallery</p>
           <h1>Fonts people have published</h1>
-          <p className="lede">Handwriting fonts made with Handpress. Every one here is free to download.</p>
+          <p className="lede">Handwriting fonts made with Fontpress. Every one here is free to download.</p>
         </div>
         <button type="button" className="primary" onClick={onStart}>Make your own</button>
       </header>

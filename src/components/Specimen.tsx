@@ -156,7 +156,7 @@ export function Specimen({
           </div>
 
           <div className="panel">
-            <h2 className="eyebrow">Save to Handpress</h2>
+            <h2 className="eyebrow">Save to Fontpress</h2>
             <div className="choice" role="radiogroup" aria-label="Who can see this font">
               <label className={visibility === 'private' ? 'choice-option on' : 'choice-option'}>
                 <input

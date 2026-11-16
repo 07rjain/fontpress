@@ -9,7 +9,7 @@ test('a Vercel text 404 reports a service failure instead of a generic error or 
 });
 
 test('a static-site HTML fallback cannot masquerade as a successful API response', async () => {
-  vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>Handpress</html>', { headers: { 'Content-Type': 'text/html' } })));
+  vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>Fontpress</html>', { headers: { 'Content-Type': 'text/html' } })));
   await expect(searchPublicFonts('', 1)).rejects.toBeInstanceOf(ApiError);
 });
 

@@ -142,7 +142,7 @@ export function Landing({
         <FestivalLights />
         <p className="fest-eyebrow">
           <span>A festival of handwriting</span>
-          <span>Made with Handpress</span>
+          <span>Made with Fontpress</span>
           <span>Free to use</span>
         </p>
         <h1 className="fest-title">
@@ -280,7 +280,7 @@ export function Landing({
           </ActionLink>
         </header>
         {headliners === null && <p className="meta" role="status">Loading community fonts…</p>}
-        {galleryError && <p className="gallery-unavailable" role="status">Community fonts are temporarily unavailable. You can still draw and preview your font in the studio. Account saves and publishing need a connection to Handpress.</p>}
+        {galleryError && <p className="gallery-unavailable" role="status">Community fonts are temporarily unavailable. You can still draw and preview your font in the studio. Account saves and publishing need a connection to Fontpress.</p>}
         {!galleryError && headliners?.length === 0 && (
           <div className="empty">
             <h2>No public fonts yet</h2>
@@ -321,7 +321,7 @@ export function Landing({
             <p className="eyebrow">Your ticket</p>
             <h2>Make something only your handwriting could make.</h2>
             <p className="lede">
-              Handpress is a free online handwriting font generator. Drawings are traced in your browser.
+              Fontpress is a free online handwriting font generator. Drawings are traced in your browser.
               Saving uploads your font and editable drawings to your account; they stay private unless you publish the font.
             </p>
             <ActionLink href="/#/draw" className="primary big" onClick={onDraw}>
@@ -332,8 +332,8 @@ export function Landing({
       </section>
 
       <footer className="landing-foot">
-        <span>Handpress</span>
-        <span>Letters are traced in your browser. Saved fonts live on Handpress.</span>
+        <span>Fontpress</span>
+        <span>Letters are traced in your browser. Saved fonts live on Fontpress.</span>
         <details className="landing-contact">
           <summary>Contact us <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="m3 5 4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></summary>
           <nav aria-label="Contact us">

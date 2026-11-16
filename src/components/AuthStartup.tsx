@@ -13,7 +13,7 @@ export function AuthStartup() {
   return (
     <main className="gate auth-startup">
       <section className="gate-card" role={failed ? 'alert' : 'status'}>
-        <span className="brand-mark big" aria-hidden="true">H</span>
+        <span className="brand-mark big" aria-hidden="true">F</span>
         <h1>{failed ? 'We couldn’t connect to sign-in' : 'Connecting to sign-in…'}</h1>
         <p className="lede">{failed
           ? 'Sign-in is temporarily unavailable. Please try loading the page again in a moment.'
