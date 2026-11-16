@@ -20,7 +20,7 @@ Set these in **Project → Settings → Environment Variables**, for Production 
 | `SUPABASE_SECRET_KEY` | Your Supabase project's secret key (`sb_secret_…`), or legacy `service_role` key |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Your existing Clerk publishable key |
 | `CLERK_SECRET_KEY` | The matching existing Clerk secret key |
-| `APP_ORIGINS` | `https://fontpress.vercel.app,https://fontpress.subdomain.wtf` plus any additional origins you use |
+| `APP_ORIGINS` | `https://fontpress.vercel.app,https://fontpress.subdomain.wtf,https://handpress.subdomain.wtf` plus any additional origins you use |
 
 Keep the Supabase secret server-only. The frontend receives only temporary URLs for individual upload objects. `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_JWKS_URL` can remain in Vercel, but this integration does not use them: Clerk sessions are verified against Clerk, not Supabase Auth. Do not replace the Clerk keys or enable a Supabase sign-in flow for this setup.
 
@@ -31,7 +31,7 @@ Redeploy after adding or changing variables. Vercel environment values are not a
 ## 3. Verify the deployment
 
 ```sh
-npm run check:api -- --origin https://fontpress.vercel.app
+npm run check:api -- --origin https://handpress.subdomain.wtf
 ```
 
 The check expects healthy database/storage access, a JSON gallery response, and an unauthenticated 401 for the private library. It catches missing API routes and HTML fallbacks. `/api/health` returns 503 if the schema, secret, bucket, or connection is unavailable.
