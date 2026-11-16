@@ -45,7 +45,7 @@ The Node server serves `dist/` and `/api` together on `PORT` (8787 by default). 
 
 ### Public pages and search
 
-The build prerenders the homepage, `/handwriting-template`, `/install-font`, and `/gallery` into HTML. The homepage and guides are readable without JavaScript or Clerk. The studio remains at the existing hash URLs and loads Clerk only when opened. Public pages use canonical URLs under `https://handpress.subdomain.wtf`; change `SITE_URL` in `src/seo.ts` if the production domain changes. See [domain migration](docs/domain-migration.md) for hosting, authentication, and redirect requirements.
+The build prerenders the homepage, `/handwriting-template`, `/install-font`, and `/gallery` into HTML. The homepage and guides are readable without JavaScript or Clerk. The studio remains at the existing hash URLs and loads Clerk only when opened. Public pages use canonical URLs under `https://fontpress.subdomain.wtf`; change `SITE_URL` in `src/seo.ts` if the production domain changes.
 
 Each public page gets its own title, description, canonical, social preview metadata and factual JSON-LD. The sitemap lists the homepage and two guides. The dynamic gallery remains `noindex,follow` and outside the sitemap until its production API and public font content are verified; then change its `index` flag in `src/seo.ts`. Robots rules allow public crawling and exclude API paths, and do not replace authentication. Unknown Node-server page URLs return a real 404.
 
@@ -57,7 +57,7 @@ The example images are generated from three authored pen-stroke characters using
 
 After deployment, verify the actual domain, social image, API routing and public pages, then use Search Console URL Inspection to confirm indexing and canonical selection. Mobile rendering, real account flows, field Core Web Vitals and AI-search citations still need live verification; metadata or structured data alone does not guarantee visibility.
 
-Run `npm run check:api -- --origin https://handpress.subdomain.wtf` against the deployed website (or replace the origin with your own). It requires JSON from health and public gallery endpoints, and a 401 from the private library without a session. It fails on hosting 404s and HTML fallbacks without creating accounts or changing saved fonts. A successful static build or `check:seo` does not establish that these API routes are deployed. If the check finds missing routes, deploy the committed Vercel API function and verify its Supabase configuration; do not use a temporary serverless filesystem for SQLite.
+Run `npm run check:api -- --origin https://fontpress.vercel.app` against the deployed website (or replace the origin with your own). It requires JSON from health and public gallery endpoints, and a 401 from the private library without a session. It fails on hosting 404s and HTML fallbacks without creating accounts or changing saved fonts. A successful static build or `check:seo` does not establish that these API routes are deployed. If the check finds missing routes, deploy the committed Vercel API function and verify its Supabase configuration; do not use a temporary serverless filesystem for SQLite.
 
 `DATA_DIR` contains `handpress.db` and SQLite WAL files. New font bytes and source projects are written together in SQLite. The `fonts/` subdirectory is retained for entries created by earlier versions. Startup adds the new nullable columns to older databases without deleting existing data. Back up the whole data directory before upgrading; take a consistent SQLite backup or stop the process while copying it, including any WAL files. This storage setup is intended for one application instance, rather than multiple replicas with separate disks.
 
@@ -82,7 +82,7 @@ Before a production release, also check real Clerk sign-in/sign-out and account 
 If production reports `failed_to_load_clerk_js` or `ERR_CONNECTION_CLOSED`, test the production authentication hostname explicitly:
 
 ```sh
-npm run check:auth -- --host clerk.handpress.subdomain.wtf --origin https://handpress.subdomain.wtf
+npm run check:auth -- --host clerk.fontpress.subdomain.wtf --origin https://fontpress.subdomain.wtf
 ```
 
 This command checks DNS, TLS, the JavaScript response, and the Clerk Frontend API. The default `npm run check:auth` checks the local publishable key instead; a successful development-instance check does not prove production is configured correctly. See [the exact production DNS records and Vercel steps](docs/clerk-production-dns.md).

@@ -1,4 +1,4 @@
-export const SITE_URL = 'https://handpress.subdomain.wtf';
+export const SITE_URL = 'https://fontpress.subdomain.wtf';
 
 export const PUBLIC_PAGES = {
   '/': {

@@ -1,6 +1,6 @@
-# Clerk DNS for handpress.subdomain.wtf
+# Clerk DNS for fontpress.subdomain.wtf
 
-The production Clerk instance uses `clerk.handpress.subdomain.wtf` for both its JavaScript and Frontend API. That hostname must reach Clerk over HTTPS. Loading Clerk JS from a different CDN alone cannot repair an unreachable Frontend API.
+The production Clerk instance uses `clerk.fontpress.subdomain.wtf` for both its JavaScript and Frontend API. That hostname must reach Clerk over HTTPS. Loading Clerk JS from a different CDN alone cannot repair an unreachable Frontend API.
 
 The authoritative nameservers for `subdomain.wtf` are `ns1.vercel-dns.com` and `ns2.vercel-dns.com`. DNS records must be edited in the Vercel team that controls the DNS zone; adding a hostname to a project's Domains list does not create the required Clerk service routing.
 
@@ -10,21 +10,21 @@ Use these values exactly as supplied by the production Clerk Domains page:
 
 | Full hostname | Type | Target |
 | --- | --- | --- |
-| `accounts.handpress.subdomain.wtf` | CNAME | `accounts.clerk.services` |
-| `clerk.handpress.subdomain.wtf` | CNAME | `frontend-api.clerk.services` |
-| `clk._domainkey.handpress.subdomain.wtf` | CNAME | `dkim1.ypa3rxzjuirh.clerk.services` |
-| `clk2._domainkey.handpress.subdomain.wtf` | CNAME | `dkim2.ypa3rxzjuirh.clerk.services` |
-| `clkmail.handpress.subdomain.wtf` | CNAME | `mail.ypa3rxzjuirh.clerk.services` |
+| `accounts.fontpress.subdomain.wtf` | CNAME | `accounts.clerk.services` |
+| `clerk.fontpress.subdomain.wtf` | CNAME | `frontend-api.clerk.services` |
+| `clk._domainkey.fontpress.subdomain.wtf` | CNAME | `dkim1.gcka9ht2qxfd.clerk.services` |
+| `clk2._domainkey.fontpress.subdomain.wtf` | CNAME | `dkim2.gcka9ht2qxfd.clerk.services` |
+| `clkmail.fontpress.subdomain.wtf` | CNAME | `mail.gcka9ht2qxfd.clerk.services` |
 
-In a DNS zone for **handpress.subdomain.wtf**, the relative names are `accounts`, `clerk`, `clk._domainkey`, `clk2._domainkey`, and `clkmail`.
+In a DNS zone for **fontpress.subdomain.wtf**, the relative names are `accounts`, `clerk`, `clk._domainkey`, `clk2._domainkey`, and `clkmail`.
 
-In the parent DNS zone for **subdomain.wtf**, the relative names are `accounts.handpress`, `clerk.handpress`, `clk._domainkey.handpress`, `clk2._domainkey.handpress`, and `clkmail.handpress`. Check the UI's full-name preview to avoid accidentally creating a duplicated suffix.
+In the parent DNS zone for **subdomain.wtf**, the relative names are `accounts.fontpress`, `clerk.fontpress`, `clk._domainkey.fontpress`, `clk2._domainkey.fontpress`, and `clkmail.fontpress`. Check the UI's full-name preview to avoid accidentally creating a duplicated suffix.
 
 ## Vercel steps
 
 1. Open the Vercel team dashboard, then Domains, and choose the DNS zone you control.
 2. Add or update the five CNAME records above. Enter each target hostname exactly, without `https://`, paths, or Vercel's deployment CNAME target.
-3. Ensure the website has an explicit DNS record before adding its child hostnames. If `handpress.subdomain.wtf` relies only on `*.subdomain.wtf`, adding the Clerk children creates an existing DNS branch and stops the website hostname from matching that wildcard. In this zone, the website uses an explicit `handpress` ALIAS to `6a61ae329fa4b635.vercel-dns-017.com`, as recommended for this project by Vercel. Preserve the unrelated wildcard record.
+3. Ensure the website has an explicit DNS record before adding its child hostnames. If `fontpress.subdomain.wtf` relies only on `*.subdomain.wtf`, adding the Clerk children creates an existing DNS branch and stops the website hostname from matching that wildcard. In this zone, the website uses an explicit `fontpress` ALIAS to `599fce6a39b185a8.vercel-dns-017.com`, matching the existing wildcard destination. Preserve both records.
 4. Remove conflicting A/AAAA/CNAME records only for the exact five Clerk hostnames. Keep the main website's records and unrelated wildcard records. A specific CNAME takes precedence over an inherited wildcard.
 5. If these records are later hosted behind a DNS proxy, use DNS-only mode for Clerk's CNAME records.
 6. Keep any existing valid DMARC policy. If no policy exists, `v=DMARC1; p=none` is an optional non-enforcing recommendation, rather than a replacement for an existing policy. Do not replace a stricter inherited policy without reviewing it.
@@ -36,7 +36,7 @@ If Vercel only shows a project domain without editable DNS records, access to th
 ## Verify
 
 ```sh
-npm run check:auth -- --host clerk.handpress.subdomain.wtf --origin https://handpress.subdomain.wtf
+npm run check:auth -- --host clerk.fontpress.subdomain.wtf --origin https://fontpress.subdomain.wtf
 ```
 
 This checks public DNS, a real HTTPS JavaScript download, and the Frontend API environment response. It exits nonzero on a connection or response failure, without printing API keys. `npm run check:auth` without `--host` checks the instance selected by the local publishable key, which may be the development instance rather than production.

@@ -4,7 +4,7 @@ import { createClerkClient, verifyToken } from '@clerk/backend';
 const secretKey = process.env.CLERK_SECRET_KEY;
 // Public gallery requests can run independently of Clerk configuration.
 const clerk = secretKey ? createClerkClient({ secretKey }) : null;
-const authorizedParties = (process.env.APP_ORIGINS ?? 'http://localhost:5173,http://localhost:8787,https://fontpress.vercel.app,https://fontpress.subdomain.wtf,https://handpress.subdomain.wtf')
+const authorizedParties = (process.env.APP_ORIGINS ?? 'http://localhost:5173,http://localhost:8787,https://fontpress.vercel.app,https://fontpress.subdomain.wtf')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
